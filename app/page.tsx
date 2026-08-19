@@ -40,10 +40,6 @@ export default function Home() {
           <h1 className="display text-[2.75rem] sm:text-[4rem]">
             By 2028, data science will be something you do, not someone you hire.
           </h1>
-          <p className="mt-10 text-lg text-ink-soft">
-            This is not a provocation. It is arithmetic. The guild will call it treason.
-            It is only counting.
-          </p>
         </Reveal>
       </section>
 

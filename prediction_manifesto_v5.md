@@ -2,8 +2,6 @@
 
 By 2028, data science will be something you do, not someone you hire.
 
-This is not a provocation. It is arithmetic. The guild will call it treason. It is only counting.
-
 The world runs on tables. Every loan, every policy, every shipment, every machine that is about to fail exists somewhere as a row with columns. The most consequential data of our civilization was never text or images. It has always been structured records, accumulating quietly for fifty years, waiting for a mathematics capable of reading them.
 
 That mathematics now exists. Tabular foundation models, trained on millions of datasets, can look at a table they have never seen and answer without a training run. What happened to language in this decade is happening to structured data now. It arrived without ceremony, and almost no one has noticed.
