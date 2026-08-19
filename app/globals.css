@@ -1,0 +1,123 @@
+@import "tailwindcss";
+
+/* Warm monochrome. Colour is a scarce resource here — it appears only on
+   status, never on structure. */
+:root {
+  --canvas: #f7f6f3;
+  --surface: #ffffff;
+  --surface-sunk: #f9f9f8;
+  --ink: #1a1a18;
+  --ink-soft: #4a4a46;
+  --muted: #787774;
+  --line: #eaeaea;
+  --line-strong: #dcdcd8;
+
+  --pale-red: #fdebec;
+  --pale-red-ink: #9f2f2d;
+  --pale-blue: #e1f3fe;
+  --pale-blue-ink: #1f6c9f;
+  --pale-green: #edf3ec;
+  --pale-green-ink: #346538;
+  --pale-yellow: #fbf3db;
+  --pale-yellow-ink: #956400;
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-sunk: var(--surface-sunk);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-pale-red: var(--pale-red);
+  --color-pale-red-ink: var(--pale-red-ink);
+  --color-pale-blue: var(--pale-blue);
+  --color-pale-blue-ink: var(--pale-blue-ink);
+  --color-pale-green: var(--pale-green);
+  --color-pale-green-ink: var(--pale-green-ink);
+  --color-pale-yellow: var(--pale-yellow);
+  --color-pale-yellow-ink: var(--pale-yellow-ink);
+  --font-sans: var(--font-geist-sans), "SF Pro Display", "Helvetica Neue", sans-serif;
+  --font-mono: var(--font-geist-mono), "SF Mono", monospace;
+  --font-serif: var(--font-newsreader), "Lyon Text", Georgia, serif;
+}
+
+html {
+  background: var(--canvas);
+}
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--pale-yellow);
+  color: var(--ink);
+}
+
+/* Editorial display type: tight tracking, tight leading. */
+.display {
+  font-family: var(--font-serif);
+  letter-spacing: -0.028em;
+  line-height: 1.08;
+  font-weight: 400;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Scroll entry — transform/opacity only. */
+.reveal {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.reveal-in {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 600ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 600ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: calc(var(--index, 0) * 80ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .reveal-in {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* A single, very slow warm drift behind the hero. Fixed layer, never scrolled. */
+.ambient {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(60rem 40rem at 15% -10%, rgba(149, 100, 0, 0.05), transparent 60%),
+    radial-gradient(50rem 35rem at 90% 5%, rgba(31, 108, 159, 0.04), transparent 60%);
+  animation: drift 34s ease-in-out infinite alternate;
+}
+
+@keyframes drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(0, -1.5rem, 0) scale(1.04); }
+}
+
+.hairline {
+  border-color: var(--line);
+}
