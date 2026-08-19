@@ -32,6 +32,48 @@ const SAMPLES = [
   { file: "machine-failure.csv", label: "Machine sensors", hint: "Will this machine fail?", target: "target" },
 ];
 
+const INFERENCE_DOWN =
+  "The inference function isn't running. Start it in a second terminal with `npm run dev:seldon`.";
+
+/**
+ * Read a JSON response without assuming it is JSON. A failing endpoint can hand
+ * back a platform error page, a proxy failure, or nothing at all, and calling
+ * .json() on any of those reports a parse error instead of the real cause —
+ * which makes the actual problem invisible. Parse defensively and say what
+ * happened.
+ */
+async function readJson(res: Response, label: string, inference = false) {
+  const text = (await res.text()).trim();
+
+  // In development the inference endpoint is a rewrite to a separate process.
+  // If nothing is listening the dev server answers for it, and the reply is
+  // never JSON — which is the single most likely reason to land here locally.
+  const devFunctionDown =
+    inference && process.env.NODE_ENV === "development" && !res.ok;
+
+  if (!text) {
+    if (devFunctionDown) throw new Error(INFERENCE_DOWN);
+    throw new Error(
+      res.ok
+        ? `${label} returned an empty response (HTTP ${res.status}).`
+        : `${label} failed with HTTP ${res.status} and no message.`,
+    );
+  }
+
+  let data: { error?: string };
+  try {
+    data = JSON.parse(text);
+  } catch {
+    if (devFunctionDown) throw new Error(INFERENCE_DOWN);
+    throw new Error(
+      `${label} returned HTTP ${res.status} instead of a result. ${text.slice(0, 120)}`,
+    );
+  }
+
+  if (!res.ok) throw new Error(data.error ?? `${label} failed (HTTP ${res.status}).`);
+  return data as never;
+}
+
 export function PredictClient() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -69,8 +111,10 @@ export function PredictClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ filename: file.name, size: file.size }),
       });
-      const job = await jobRes.json();
-      if (!jobRes.ok) throw new Error(job.error);
+      const job: { jobId: string; token: string; uploadUrl: string } = await readJson(
+        jobRes,
+        "Creating the job",
+      );
 
       const put = await fetch(job.uploadUrl, { method: "PUT", body: file });
       if (!put.ok) throw new Error("The upload did not complete. Try again.");
@@ -83,14 +127,17 @@ export function PredictClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "inspect", jobId: job.jobId, token: job.token }),
       });
-      const meta = await inspectRes.json();
-      if (!inspectRes.ok) throw new Error(meta.error);
+      const meta: { nRows: number; nCols: number; columns: ColumnMeta[] } = await readJson(
+        inspectRes,
+        "Reading the table",
+        true,
+      );
 
       setColumns(meta.columns);
       setShape({ nRows: meta.nRows, nCols: meta.nCols });
       // Default to a column that has blanks to fill — that is usually the point.
-      const withBlanks = meta.columns.find((c: ColumnMeta) => c.predictable && c.n_missing > 0);
-      setTarget((withBlanks ?? meta.columns.find((c: ColumnMeta) => c.predictable))?.name ?? "");
+      const withBlanks = meta.columns.find((c) => c.predictable && c.n_missing > 0);
+      setTarget((withBlanks ?? meta.columns.find((c) => c.predictable))?.name ?? "");
       setPhase("choosing");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
@@ -106,8 +153,7 @@ export function PredictClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "predict", jobId, token, target }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data: Result = await readJson(res, "The prediction", true);
       setResult(data); setPhase("done");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
@@ -119,10 +165,12 @@ export function PredictClient() {
     setError(null);
     try {
       const res = await fetch(`/samples/${sample.file}`);
+      if (!res.ok) throw new Error(`Could not fetch that example (HTTP ${res.status}).`);
       const blob = await res.blob();
       await start(new File([blob], sample.file, { type: "text/csv" }));
-    } catch {
-      setError("Could not load that example.");
+    } catch (e) {
+      // start() sets its own error; only report failures from fetching the file.
+      if (e instanceof Error && e.message.startsWith("Could not fetch")) setError(e.message);
     }
   };
 
