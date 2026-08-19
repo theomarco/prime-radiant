@@ -49,10 +49,6 @@ cannot work and says why, instead of failing after you commit.
 
 ## Limits
 
-Free-tier Supabase gives 1 GB of storage and Vercel Hobby a 300 s function ceiling.
-Seldon API requests are unmetered here, so the binding constraints are latency and
-disk, never cost.
-
 | | |
 |---|---|
 | File size | 10 MB |

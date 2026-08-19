@@ -68,7 +68,7 @@ rows), both round-tripping in about 1.5-2.6 s.
    read is now cache-busted, and finished jobs refuse to re-run.
 
 4. **Abandoned uploads leaked storage.** A file uploaded but never predicted stayed
-   forever, which on a 1 GB free tier is the whole budget. Added a daily cron that
+   forever, which is the entire storage budget. Added a daily cron that
    sweeps anything over 24 h and marks it cleaned.
 
 5. **`vercel dev` cannot serve the Python function** in a Next.js project — the dev
