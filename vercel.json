@@ -2,5 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "api/seldon.py": { "maxDuration": 300 }
-  }
+  },
+  "crons": [{ "path": "/api/cleanup", "schedule": "0 3 * * *" }]
 }

@@ -59,7 +59,7 @@ export async function POST(request: Request) {
   const { data: job, error: insertError } = await db
     .from("jobs")
     .insert({ ip_hash: ipHash, filename, size_bytes: size, storage_path: "" })
-    .select("id")
+    .select("id,access_token")
     .single();
   if (insertError || !job) return bad(insertError?.message ?? "Could not create job.", 500);
 
@@ -74,7 +74,14 @@ export async function POST(request: Request) {
 
   await db.from("jobs").update({ storage_path: storagePath }).eq("id", job.id);
 
-  return NextResponse.json({ jobId: job.id, uploadUrl: signed.signedUrl, path: storagePath });
+  // The token authorises the follow-up inspect/predict calls. Identity is
+  // resolved here, once, and never re-derived in the Python runtime.
+  return NextResponse.json({
+    jobId: job.id,
+    token: job.access_token,
+    uploadUrl: signed.signedUrl,
+    path: storagePath,
+  });
 }
 
 /** Poll a job. Scoped to the caller's identity so job ids aren't enumerable. */

@@ -37,6 +37,7 @@ export function PredictClient() {
   const [error, setError] = useState<string | null>(null);
   const [filename, setFilename] = useState("");
   const [jobId, setJobId] = useState("");
+  const [token, setToken] = useState("");
   const [columns, setColumns] = useState<ColumnMeta[]>([]);
   const [shape, setShape] = useState<{ nRows: number; nCols: number } | null>(null);
   const [target, setTarget] = useState("");
@@ -45,7 +46,7 @@ export function PredictClient() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
-    setPhase("idle"); setError(null); setFilename(""); setJobId("");
+    setPhase("idle"); setError(null); setFilename(""); setJobId(""); setToken("");
     setColumns([]); setShape(null); setTarget(""); setResult(null);
     if (inputRef.current) inputRef.current.value = "";
   };
@@ -74,12 +75,13 @@ export function PredictClient() {
       const put = await fetch(job.uploadUrl, { method: "PUT", body: file });
       if (!put.ok) throw new Error("The upload did not complete. Try again.");
       setJobId(job.jobId);
+      setToken(job.token);
 
       setPhase("inspecting");
       const inspectRes = await fetch("/api/seldon", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "inspect", jobId: job.jobId }),
+        body: JSON.stringify({ action: "inspect", jobId: job.jobId, token: job.token }),
       });
       const meta = await inspectRes.json();
       if (!inspectRes.ok) throw new Error(meta.error);
@@ -102,7 +104,7 @@ export function PredictClient() {
       const res = await fetch("/api/seldon", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "predict", jobId, target }),
+        body: JSON.stringify({ action: "predict", jobId, token, target }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);

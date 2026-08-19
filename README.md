@@ -73,14 +73,19 @@ address is never stored.
 
 ```bash
 npm install
-cp .env.example .env.local     # fill in the four values
+cp .env.example .env.local     # fill in the values
 supabase link --project-ref <your-ref>
 supabase db push
-vercel dev                     # not `next dev` — that won't run the Python function
+
+npm run dev:seldon             # terminal 1 — the Python inference function
+npm run dev                    # terminal 2 — the site
 ```
 
-`next dev` is fine for the manifesto and the board, but `/api/seldon` is a Vercel
-Python function and only runs under `vercel dev`.
+On Vercel, `/api/seldon` is served by the platform's filesystem phase before any
+Next.js route sees it. Locally there is no such phase: the Next dev server owns
+every path, so `vercel dev` returns its own 404 for that route. `npm run dev:seldon`
+runs the same handler standalone on port 3999 and `next.config.ts` rewrites to it in
+development only.
 
 ## Sample data
 

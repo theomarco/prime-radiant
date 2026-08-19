@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "dev:seldon": "python3 scripts/dev-seldon.py"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",

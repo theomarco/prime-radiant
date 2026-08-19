@@ -18,13 +18,14 @@ column mean (0 after centering).
 """
 
 import csv
-import hashlib
+import hmac
 import io
 import json
 import math
 import os
 import random
 import time
+import uuid
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler
@@ -263,7 +264,11 @@ def _sb_request(method, path, data=None, headers=None, timeout=60):
 
 
 def storage_download(path):
-    return _sb_request("GET", f"/storage/v1/object/{BUCKET}/{path}", timeout=120)
+    # Deleted objects keep being served from the CDN on the plain object path, so
+    # bust the cache on every read — otherwise a job could be re-run against a
+    # file we already promised the user we had thrown away.
+    nonce = uuid.uuid4().hex
+    return _sb_request("GET", f"/storage/v1/object/{BUCKET}/{path}?t={nonce}", timeout=120)
 
 
 def storage_upload(path, payload, content_type="text/csv"):
@@ -306,15 +311,6 @@ def job_update(job_id, patch):
         data=json.dumps(patch).encode(),
         headers={"Content-Type": "application/json", "Prefer": "return=minimal"},
     )
-
-
-def identity_hash(headers):
-    """Must stay byte-identical to lib/identity.ts."""
-    fwd = headers.get("x-forwarded-for") or ""
-    ip = fwd.split(",")[0].strip() or headers.get("x-real-ip") or "0.0.0.0"
-    ua = headers.get("user-agent") or ""
-    salt = os.environ.get("IDENTITY_SALT", "prime-radiant-dev-salt")
-    return hashlib.sha256(f"{salt}|{ip}|{ua}".encode()).hexdigest()[:32]
 
 
 # ------------------------------------------------------------- inference ---
@@ -548,7 +544,8 @@ class handler(BaseHTTPRequestHandler):
             job = job_get(job_id)
             if not job:
                 return self._reply(404, {"error": "Job not found."})
-            if job["ip_hash"] != identity_hash(self.headers):
+            token = body.get("token") or ""
+            if not hmac.compare_digest(str(job.get("access_token") or ""), str(token)):
                 return self._reply(403, {"error": "That job belongs to someone else."})
             if job.get("cleaned_at"):
                 return self._reply(410, {"error": "This job's files have expired."})
@@ -558,6 +555,8 @@ class handler(BaseHTTPRequestHandler):
 
             if job["status"] == "running":
                 return self._reply(409, {"error": "That prediction is already running."})
+            if job["status"] in ("done", "error"):
+                return self._reply(409, {"error": "That prediction already ran. Upload the file again to redo it."})
             target = body.get("target")
             if not target:
                 return self._reply(400, {"error": "Missing target column."})
