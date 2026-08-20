@@ -192,7 +192,9 @@ export function PredictClient() {
     phase === "uploading" ? "Uploading" : phase === "inspecting" ? "Reading the table" : "Predicting";
 
   return (
-    <div className="space-y-10">
+    <div
+      className={`mx-auto space-y-10 ${phase === "done" ? "max-w-6xl" : "max-w-3xl"}`}
+    >
       {/* ---------------------------------------------------------- dropzone */}
       {phase === "idle" && (
         <>
@@ -398,7 +400,7 @@ export function PredictClient() {
           <div className="overflow-hidden rounded-xl border border-line bg-surface">
             <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-7 py-4">
               <p className="text-[0.9375rem] text-ink">
-                First {result.preview.length} rows, as they went in and came back
+                First {result.preview.length} rows — answer first, inputs alongside
               </p>
               <p className="font-mono text-[0.6875rem] tracking-wide text-muted uppercase">
                 {result.previewColumns.length} input column
@@ -410,48 +412,61 @@ export function PredictClient() {
               <table className="min-w-full text-left text-[0.8125rem] whitespace-nowrap">
                 <thead>
                   <tr className="border-b border-line font-mono text-[0.6875rem] tracking-wide text-muted uppercase">
-                    <th className="sticky left-0 z-10 bg-surface px-5 py-3 font-normal">Row</th>
+                    {/* One pinned cell, not three. Separate sticky columns need
+                        hard-coded left offsets that drift from the widths the
+                        browser actually computes, and the labels collide. */}
+                    <th
+                      className="sticky left-0 z-20 border-r border-line-strong px-5 py-3 text-left font-normal"
+                      style={{ background: "var(--answer-tint)" }}
+                    >
+                      <span className="flex items-center gap-5">
+                        <span className="w-11">Row</span>
+                        <span className="w-16 text-ink">{result.target}</span>
+                        <span className="w-24">Confidence</span>
+                      </span>
+                    </th>
                     {result.previewColumns.map((c) => (
-                      <th key={c} className="px-4 py-3 font-normal">
+                      <th key={c} className="px-4 py-3 text-left font-normal">
                         {c}
                       </th>
                     ))}
-                    <th className="border-l border-line-strong bg-pale-yellow/40 px-4 py-3 font-normal text-ink">
-                      {result.target}
-                    </th>
-                    <th className="bg-pale-yellow/40 px-4 py-3 font-normal">Confidence</th>
                   </tr>
                 </thead>
                 <tbody className="font-mono">
                   {result.preview.map((p) => (
                     <tr key={p.row} className="border-b border-line last:border-b-0">
-                      <td className="sticky left-0 z-10 bg-surface px-5 py-2.5 text-muted">{p.row}</td>
+                      <td
+                        className="sticky left-0 z-20 border-r border-line-strong px-5 py-2.5"
+                        style={{ background: "var(--answer-tint)" }}
+                      >
+                        <span className="flex items-center gap-5">
+                          <span className="w-11 text-muted">{p.row}</span>
+                          <span className="w-16 text-ink">{String(p.prediction)}</span>
+                          <span className="flex w-24 items-center gap-2 text-muted">
+                            {p.confidence === null ? (
+                              "—"
+                            ) : (
+                              <>
+                                <span className="h-1.5 w-8 shrink-0 rounded-full bg-surface-sunk">
+                                  <span
+                                    className="block h-1.5 rounded-full"
+                                    style={{
+                                      width: `${p.confidence * 100}%`,
+                                      background: "var(--seq-4)",
+                                    }}
+                                  />
+                                </span>
+                                {(p.confidence * 100).toFixed(1)}%
+                              </>
+                            )}
+                          </span>
+                        </span>
+                      </td>
                       {p.values.map((v, i) => (
                         <td key={result.previewColumns[i]} className="px-4 py-2.5 text-ink-soft">
                           {v === null || v === "" ? <span className="text-muted">—</span> : String(v)}
                         </td>
                       ))}
-                      <td className="border-l border-line-strong bg-pale-yellow/40 px-4 py-2.5 text-ink">
-                        {String(p.prediction)}
-                      </td>
-                      <td className="bg-pale-yellow/40 px-4 py-2.5 text-muted">
-                        {p.confidence === null ? (
-                          "—"
-                        ) : (
-                          <span className="flex items-center gap-2">
-                            <span className="h-1.5 w-12 rounded-full bg-surface-sunk">
-                              <span
-                                className="block h-1.5 rounded-full"
-                                style={{
-                                  width: `${p.confidence * 100}%`,
-                                  background: "var(--seq-4)",
-                                }}
-                              />
-                            </span>
-                            {(p.confidence * 100).toFixed(1)}%
-                          </span>
-                        )}
-                      </td>
                     </tr>
                   ))}
                 </tbody>

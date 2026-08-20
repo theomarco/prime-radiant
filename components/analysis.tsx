@@ -28,11 +28,20 @@ const num = (n: number) =>
 /* ------------------------------------------------------------- tooltip --- */
 /** Hover/focus layer. An HTML chart is interactive by default, so every mark
  *  carries one; keyboard focus gets the same treatment as the pointer. */
-function Tip({ label, children }: { label: string; children: ReactNode }) {
+function Tip({
+  label,
+  children,
+  className = "inline-flex",
+}: {
+  label: string;
+  children: ReactNode;
+  /** Must establish a width for percentage-sized marks — see the bar call sites. */
+  className?: string;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <span
-      className="relative inline-flex"
+      className={`relative ${className}`}
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
       onFocus={() => setOpen(true)}
@@ -115,7 +124,10 @@ function MixChart({ analysis, target }: { analysis: Analysis; target: string }) 
                 return (
                   <div key={s.key} className="flex items-center gap-3">
                     <div className="min-w-0 flex-1">
-                      <Tip label={`${s.name}: ${count.toLocaleString()} rows (${pct(share)})`}>
+                      <Tip
+                        label={`${s.name}: ${count.toLocaleString()} rows (${pct(share)})`}
+                        className="flex w-full"
+                      >
                         <span
                           tabIndex={0}
                           className="flex h-6 w-full items-center outline-none focus-visible:ring-2 focus-visible:ring-ink"
@@ -165,7 +177,10 @@ function ConfidenceChart({ analysis }: { analysis: Analysis }) {
         {bands.map((band, i) => (
           <div key={i} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-2">
             <span className="font-mono text-[0.6875rem] text-ink">{band.count.toLocaleString()}</span>
-            <Tip label={`${band.count.toLocaleString()} rows between ${pct(band.from)} and ${pct(Math.min(band.to, 1))}`}>
+            <Tip
+              label={`${band.count.toLocaleString()} rows between ${pct(band.from)} and ${pct(Math.min(band.to, 1))}`}
+              className="flex w-full"
+            >
               <span
                 tabIndex={0}
                 className="flex w-full min-w-6 items-end justify-center outline-none focus-visible:ring-2 focus-visible:ring-ink"
@@ -220,7 +235,10 @@ function DriverChart({ analysis }: { analysis: Analysis }) {
                 <span className="truncate font-mono text-[0.75rem] text-ink">{d.name}</span>
                 <span className="shrink-0 text-[0.75rem] text-muted">{detail}</span>
               </div>
-              <Tip label={`${d.name} — separation ${d.separation.toFixed(2)} (${d.kind})`}>
+              <Tip
+                label={`${d.name} — separation ${d.separation.toFixed(2)} (${d.kind})`}
+                className="flex w-full"
+              >
                 <span
                   tabIndex={0}
                   className="flex h-6 w-full items-center outline-none focus-visible:ring-2 focus-visible:ring-ink"
@@ -288,6 +306,7 @@ function ConfusionMatrix({ analysis }: { analysis: Analysis }) {
                     <td key={predicted} className="p-0">
                       <Tip
                         label={`${n.toLocaleString()} rows: actually "${actual}", predicted "${predicted}"`}
+                        className="inline-flex"
                       >
                         <span
                           tabIndex={0}

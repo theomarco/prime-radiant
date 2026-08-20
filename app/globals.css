@@ -28,6 +28,9 @@
      marks — which is also what discharges the low-contrast steps. */
   --series-base: #1f6c9f;
   --series-pred: #9f2f2d;
+  /* Opaque, because it backs a sticky cell that content scrolls beneath. */
+  --answer-tint: #fdfaf1;
+
   --seq-1: #6fb1df;
   --seq-2: #5b9dc9;
   --seq-3: #4688b4;
