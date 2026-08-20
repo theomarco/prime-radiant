@@ -40,7 +40,6 @@ export default function Home() {
       {/* ------------------------------------------------------------ hero */}
       <section className="grid items-center gap-12 pt-20 pb-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-14 lg:pt-24">
         <Reveal>
-          <p className="eyebrow mb-6">The Prediction Manifesto</p>
           <h1 className="text-[2.1rem] leading-[1.1] tracking-[-0.022em] sm:text-[2.6rem] lg:text-[3rem]">
             You have the past and the present.{" "}
             {/* Own line: the two clauses are a contrast, and inline the accent
@@ -74,10 +73,15 @@ export default function Home() {
       {/* --------------------------------------------------------- the case */}
       <section className="grid gap-6 py-20 lg:grid-cols-[9rem_minmax(0,1fr)] lg:gap-12">
         <Reveal>
-          <p className="eyebrow lg:pt-1.5">The case</p>
+          <p className="eyebrow lg:pt-1.5">The Prediction Manifesto</p>
         </Reveal>
         <div>
-        <Reveal className="max-w-[68ch] space-y-7 text-[1.0625rem] text-ink-soft">
+        <Reveal>
+          <h2 className="display max-w-[32ch] text-[1.9rem] sm:text-[2.2rem]">
+            By 2028, predicting will be something you do, not something you wait for.
+          </h2>
+        </Reveal>
+        <Reveal index={1} className="mt-10 max-w-[68ch] space-y-7 text-[1.0625rem] text-ink-soft">
           <p>
             The world runs on tables. Every loan, every policy, every shipment, every
             machine that is about to fail exists somewhere as a row with columns. The
@@ -94,7 +98,7 @@ export default function Home() {
           </p>
         </Reveal>
 
-        <Reveal index={1} className="mt-14">
+        <Reveal index={2} className="mt-14">
           <div className="grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2">
             <div className="bg-surface p-8">
               <p className="eyebrow mb-4">The old craft</p>
