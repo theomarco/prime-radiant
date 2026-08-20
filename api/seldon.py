@@ -331,6 +331,138 @@ def post_inference(x_train, y_train, x_test, task_type):
         return json.loads(r.read())
 
 
+# -------------------------------------------------------------- analysis ---
+CONFIDENCE_BANDS = ((0.0, 0.6), (0.6, 0.7), (0.7, 0.8), (0.8, 0.9), (0.9, 1.01))
+REVIEW_THRESHOLD = 0.6
+
+
+def _counts_as_shares(values):
+    total = len(values) or 1
+    tally = {}
+    for v in values:
+        tally[str(v)] = tally.get(str(v), 0) + 1
+    return [
+        {"label": k, "count": n, "share": n / total}
+        for k, n in sorted(tally.items(), key=lambda kv: -kv[1])
+    ]
+
+
+def _numeric_separation(a_values, b_values):
+    """Standardised difference of means between two groups, or None."""
+    a = [float(v) for v in a_values if not is_null_value(v) and not isinstance(v, str)]
+    b = [float(v) for v in b_values if not is_null_value(v) and not isinstance(v, str)]
+    if len(a) < 2 or len(b) < 2:
+        return None
+    ma, mb = sum(a) / len(a), sum(b) / len(b)
+    va = sum((x - ma) ** 2 for x in a) / len(a)
+    vb = sum((x - mb) ** 2 for x in b) / len(b)
+    pooled = math.sqrt((va + vb) / 2)
+    if pooled == 0:
+        return None
+    return {"separation": abs(ma - mb) / pooled, "group_a_mean": ma, "group_b_mean": mb}
+
+
+def _categorical_separation(a_values, b_values):
+    """Largest share gap for any single value between the two groups."""
+    a = [str(v) for v in a_values if not is_null_value(v)]
+    b = [str(v) for v in b_values if not is_null_value(v)]
+    if not a or not b:
+        return None
+    best = None
+    for value in set(a) | set(b):
+        share_a = a.count(value) / len(a)
+        share_b = b.count(value) / len(b)
+        gap = abs(share_a - share_b)
+        if best is None or gap > best["separation"]:
+            best = {"separation": gap, "value": value, "group_a_share": share_a, "group_b_share": share_b}
+    return best
+
+
+def build_analysis(columns, feature_cols, target, train_idx, test_idx, preds, proba, y_all, evaluating):
+    """Everything we can say about these predictions without another API call.
+
+    Deliberately no extra inference: the point of the product is that an answer
+    costs seconds, and spending ten more round trips on permutation importance
+    would trade that away. What is here is descriptive — how the predictions are
+    distributed, how confident they are, which rows to look at by hand, and how
+    the input columns differ between the predicted groups. That last one is an
+    association, not a cause, and is labelled as such in the UI.
+    """
+    analysis = {}
+
+    # 1. Predicted mix against the mix in the rows that taught the model. A big
+    #    gap here is the fastest way to notice something is wrong.
+    analysis["predictedMix"] = _counts_as_shares([str(p) for p in preds])
+    analysis["baseMix"] = _counts_as_shares([str(y_all[i]) for i in train_idx])
+
+    # 2. How sure the model is, and which rows a human should check first.
+    if proba:
+        confidences = [max(row) for row in proba[: len(test_idx)]]
+        analysis["confidenceBands"] = [
+            {
+                "from": lo,
+                "to": min(hi, 1.0),
+                "count": sum(1 for c in confidences if lo <= c < hi),
+            }
+            for lo, hi in CONFIDENCE_BANDS
+        ]
+        ordered = sorted(confidences)
+        mid = len(ordered) // 2
+        analysis["medianConfidence"] = (
+            ordered[mid] if len(ordered) % 2 else (ordered[mid - 1] + ordered[mid]) / 2
+        ) if ordered else None
+        low = [
+            {
+                "row": test_idx[n] + 2,
+                "prediction": preds[n] if n < len(preds) else None,
+                "confidence": round(c, 4),
+            }
+            for n, c in enumerate(confidences)
+            if c < REVIEW_THRESHOLD
+        ]
+        low.sort(key=lambda r: r["confidence"])
+        analysis["needsReview"] = {"count": len(low), "threshold": REVIEW_THRESHOLD, "rows": low[:10]}
+
+    # 3. How the input columns differ between the two largest predicted groups.
+    groups = [g["label"] for g in analysis["predictedMix"][:2]]
+    if len(groups) == 2:
+        a_rows = [test_idx[n] for n, p in enumerate(preds) if str(p) == groups[0] and n < len(test_idx)]
+        b_rows = [test_idx[n] for n, p in enumerate(preds) if str(p) == groups[1] and n < len(test_idx)]
+        drivers = []
+        for col in feature_cols:
+            a_values = [columns[col][i] for i in a_rows]
+            b_values = [columns[col][i] for i in b_rows]
+            non_null = [v for v in a_values + b_values if not is_null_value(v)]
+            if not non_null:
+                continue
+            if any(isinstance(v, str) for v in non_null):
+                found = _categorical_separation(a_values, b_values)
+                kind = "categorical"
+            else:
+                found = _numeric_separation(a_values, b_values)
+                kind = "numeric"
+            if found:
+                drivers.append({"name": col, "kind": kind, **found})
+        drivers.sort(key=lambda d: -d["separation"])
+        analysis["groups"] = {"a": groups[0], "b": groups[1], "aCount": len(a_rows), "bCount": len(b_rows)}
+        analysis["drivers"] = drivers[:8]
+
+    # 4. With ground truth in hand, show exactly where it was wrong.
+    if evaluating:
+        truth = [str(y_all[i]) for i in test_idx]
+        labels = sorted(set(truth) | {str(p) for p in preds})
+        analysis["confusion"] = {
+            "labels": labels,
+            "matrix": [
+                [sum(1 for t, p in zip(truth, preds) if t == actual and str(p) == predicted)
+                 for predicted in labels]
+                for actual in labels
+            ],
+        }
+
+    return analysis
+
+
 # --------------------------------------------------------------- actions ---
 MAX_CLASSES = 100
 
@@ -541,13 +673,25 @@ def action_predict(job, target):
         "duration_ms": duration_ms,
     })
 
+    # The preview carries the input values too — a prediction with no row beside
+    # it is unreadable. Column count is capped so the payload stays small; the
+    # full table is in the download.
+    preview_cols = feature_cols[:40]
     preview = []
-    for n, row_idx in enumerate(test_idx[:20]):
+    for n, row_idx in enumerate(test_idx[:25]):
         preview.append({
             "row": row_idx + 2,
             "prediction": preds[n] if n < len(preds) else None,
             "confidence": round(max(proba[n]), 4) if proba and n < len(proba) else None,
+            "values": [
+                None if is_null_value(columns[c][row_idx]) else columns[c][row_idx]
+                for c in preview_cols
+            ],
         })
+
+    analysis = build_analysis(
+        columns, feature_cols, target, train_idx, test_idx, preds, proba, y_all, evaluating
+    )
 
     return {
         "mode": "evaluate" if evaluating else "predict",
@@ -559,7 +703,10 @@ def action_predict(job, target):
         "nPredicted": len(test_idx),
         "durationMs": duration_ms,
         "metrics": metrics,
+        "previewColumns": preview_cols,
+        "previewTruncated": len(feature_cols) > len(preview_cols),
         "preview": preview,
+        "analysis": analysis,
         "downloadUrl": storage_signed_url(result_path),
     }
 

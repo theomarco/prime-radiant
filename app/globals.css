@@ -20,6 +20,19 @@
   --pale-green-ink: #346538;
   --pale-yellow: #fbf3db;
   --pale-yellow-ink: #956400;
+
+  /* Chart parameters. The 2-slot categorical pair is the only place colour
+     carries identity, and it passes all six checks of the palette validator
+     (worst adjacent CVD dE 17.8 deutan, normal-vision 24.6). Everything else is
+     magnitude, so it uses one hue light-to-dark with values printed on the
+     marks — which is also what discharges the low-contrast steps. */
+  --series-base: #1f6c9f;
+  --series-pred: #9f2f2d;
+  --seq-1: #6fb1df;
+  --seq-2: #5b9dc9;
+  --seq-3: #4688b4;
+  --seq-4: #32749f;
+  --seq-5: #1b618b;
 }
 
 @theme inline {
@@ -42,6 +55,8 @@
   --font-sans: var(--font-geist-sans), "SF Pro Display", "Helvetica Neue", sans-serif;
   --font-mono: var(--font-geist-mono), "SF Mono", monospace;
   --font-serif: var(--font-newsreader), "Lyon Text", Georgia, serif;
+  --color-series-base: var(--series-base);
+  --color-series-pred: var(--series-pred);
 }
 
 html {
@@ -120,4 +135,31 @@ body {
 
 .hairline {
   border-color: var(--line);
+}
+
+/* Bars grow from the baseline on first paint; transform only. */
+@keyframes grow-x {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+.bar-x {
+  transform-origin: left center;
+  animation: grow-x 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--index, 0) * 45ms);
+}
+
+@keyframes grow-y {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
+
+.bar-y {
+  transform-origin: center bottom;
+  animation: grow-y 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--index, 0) * 45ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar-x, .bar-y { animation: none; }
 }

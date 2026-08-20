@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { LIMITS_COPY, MAX_FILE_BYTES, isAcceptedFile } from "@/lib/limits";
+import { PredictionAnalysis, type Analysis } from "@/components/analysis";
 
 type ColumnMeta = {
   name: string;
@@ -25,7 +26,15 @@ type Result = {
   droppedFeatures: { name: string; reason: string }[];
   durationMs: number;
   metrics: Record<string, number | null> | null;
-  preview: { row: number; prediction: unknown; confidence: number | null }[];
+  previewColumns: string[];
+  previewTruncated: boolean;
+  preview: {
+    row: number;
+    prediction: unknown;
+    confidence: number | null;
+    values: (string | number | null)[];
+  }[];
+  analysis: Analysis;
   downloadUrl: string;
 };
 
@@ -387,25 +396,61 @@ export function PredictClient() {
           )}
 
           <div className="overflow-hidden rounded-xl border border-line bg-surface">
-            <p className="border-b border-line px-7 py-4 text-[0.9375rem] text-ink">
-              First {result.preview.length} predictions
-            </p>
+            <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-7 py-4">
+              <p className="text-[0.9375rem] text-ink">
+                First {result.preview.length} rows, as they went in and came back
+              </p>
+              <p className="font-mono text-[0.6875rem] tracking-wide text-muted uppercase">
+                {result.previewColumns.length} input column
+                {result.previewColumns.length === 1 ? "" : "s"}
+                {result.previewTruncated ? " (first 40)" : ""} · scroll sideways
+              </p>
+            </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-[0.8125rem]">
+              <table className="min-w-full text-left text-[0.8125rem] whitespace-nowrap">
                 <thead>
                   <tr className="border-b border-line font-mono text-[0.6875rem] tracking-wide text-muted uppercase">
-                    <th className="px-7 py-3 font-normal">Row</th>
-                    <th className="px-7 py-3 font-normal">{result.target}</th>
-                    <th className="px-7 py-3 font-normal">Confidence</th>
+                    <th className="sticky left-0 z-10 bg-surface px-5 py-3 font-normal">Row</th>
+                    {result.previewColumns.map((c) => (
+                      <th key={c} className="px-4 py-3 font-normal">
+                        {c}
+                      </th>
+                    ))}
+                    <th className="border-l border-line-strong bg-pale-yellow/40 px-4 py-3 font-normal text-ink">
+                      {result.target}
+                    </th>
+                    <th className="bg-pale-yellow/40 px-4 py-3 font-normal">Confidence</th>
                   </tr>
                 </thead>
                 <tbody className="font-mono">
                   {result.preview.map((p) => (
                     <tr key={p.row} className="border-b border-line last:border-b-0">
-                      <td className="px-7 py-2.5 text-muted">{p.row}</td>
-                      <td className="px-7 py-2.5 text-ink">{String(p.prediction)}</td>
-                      <td className="px-7 py-2.5 text-muted">
-                        {p.confidence === null ? "—" : `${(p.confidence * 100).toFixed(1)}%`}
+                      <td className="sticky left-0 z-10 bg-surface px-5 py-2.5 text-muted">{p.row}</td>
+                      {p.values.map((v, i) => (
+                        <td key={result.previewColumns[i]} className="px-4 py-2.5 text-ink-soft">
+                          {v === null || v === "" ? <span className="text-muted">—</span> : String(v)}
+                        </td>
+                      ))}
+                      <td className="border-l border-line-strong bg-pale-yellow/40 px-4 py-2.5 text-ink">
+                        {String(p.prediction)}
+                      </td>
+                      <td className="bg-pale-yellow/40 px-4 py-2.5 text-muted">
+                        {p.confidence === null ? (
+                          "—"
+                        ) : (
+                          <span className="flex items-center gap-2">
+                            <span className="h-1.5 w-12 rounded-full bg-surface-sunk">
+                              <span
+                                className="block h-1.5 rounded-full"
+                                style={{
+                                  width: `${p.confidence * 100}%`,
+                                  background: "var(--seq-4)",
+                                }}
+                              />
+                            </span>
+                            {(p.confidence * 100).toFixed(1)}%
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -413,6 +458,20 @@ export function PredictClient() {
               </table>
             </div>
           </div>
+
+          {result.analysis && (
+            <div>
+              <div className="mb-6">
+                <p className="eyebrow mb-2">Reading the predictions</p>
+                <p className="max-w-xl text-[0.9375rem] text-muted">
+                  A prediction is worth the decision it changes, so the useful questions are
+                  whether the mix looks plausible, where the model is unsure, and what
+                  actually separates the groups.
+                </p>
+              </div>
+              <PredictionAnalysis analysis={result.analysis} target={result.target} />
+            </div>
+          )}
 
           <div className="flex flex-wrap items-center gap-3">
             <a
