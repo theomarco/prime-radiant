@@ -1,6 +1,6 @@
 # The Prediction Manifesto
 
-By 2028, data science will be something you do, not someone you hire.
+By 2028, predicting will be something you do, not something you wait for.
 
 The world runs on tables. Every loan, every policy, every shipment, every machine that is about to fail exists somewhere as a row with columns. The most consequential data of our civilization was never text or images. It has always been structured records, accumulating quietly for fifty years, waiting for a mathematics capable of reading them.
 

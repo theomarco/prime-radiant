@@ -127,7 +127,7 @@ export function BoardClient() {
           <button
             type="submit"
             disabled={submitting || whatToPredict.trim().length < 3 || whatFor.trim().length < 3}
-            className="rounded-md bg-ink px-6 py-3 text-[0.9375rem] text-white transition-colors hover:bg-[#333] active:scale-[0.98] disabled:opacity-40"
+            className="btn-primary rounded-md px-6 py-3 text-[0.9375rem] transition-all disabled:opacity-40"
           >
             {submitting ? "Posting…" : "Post it"}
           </button>
@@ -177,8 +177,8 @@ export function BoardClient() {
                 aria-label={idea.voted ? "Remove your vote" : "Vote for this"}
                 className={`flex h-14 w-12 shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg border transition-colors ${
                   idea.voted
-                    ? "border-ink bg-ink text-white"
-                    : "border-line-strong bg-surface text-ink hover:border-ink"
+                    ? "border-accent bg-accent text-accent-ink"
+                    : "border-line-strong bg-surface text-ink hover:border-muted"
                 }`}
               >
                 <svg width="11" height="7" viewBox="0 0 11 7" fill="none" aria-hidden>

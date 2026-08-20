@@ -217,7 +217,7 @@ export function PredictClient() {
             </p>
             <button
               onClick={() => inputRef.current?.click()}
-              className="mt-7 rounded-md bg-ink px-6 py-3 text-[0.9375rem] text-white transition-colors hover:bg-[#333] active:scale-[0.98]"
+              className="mt-7 btn-primary rounded-md px-6 py-3 text-[0.9375rem] transition-all"
             >
               Choose a file
             </button>
@@ -315,7 +315,7 @@ export function PredictClient() {
             <button
               onClick={() => void predict()}
               disabled={!target}
-              className="rounded-md bg-ink px-6 py-3 text-[0.9375rem] text-white transition-colors hover:bg-[#333] active:scale-[0.98] disabled:opacity-40"
+              className="btn-primary rounded-md px-6 py-3 text-[0.9375rem] transition-all disabled:opacity-40"
             >
               Predict {target ? `"${target}"` : ""}
             </button>
@@ -397,7 +397,7 @@ export function PredictClient() {
             </div>
           )}
 
-          <div className="overflow-hidden rounded-xl border border-line bg-surface">
+          <div className="overflow-hidden rounded-xl border border-line bg-surface-raised">
             <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-7 py-4">
               <p className="text-[0.9375rem] text-ink">
                 First {result.preview.length} rows — answer first, inputs alongside
@@ -491,7 +491,7 @@ export function PredictClient() {
           <div className="flex flex-wrap items-center gap-3">
             <a
               href={result.downloadUrl}
-              className="rounded-md bg-ink px-6 py-3 text-[0.9375rem] text-white transition-colors hover:bg-[#333] active:scale-[0.98]"
+              className="btn-primary rounded-md px-6 py-3 text-[0.9375rem] transition-all"
             >
               Download all {result.nPredicted.toLocaleString()} predictions
             </a>

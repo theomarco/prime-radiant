@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Reveal } from "@/components/reveal";
+import { AsciiField } from "@/components/ascii-field";
 
 const AXIOMS = [
   {
@@ -27,19 +28,39 @@ const AXIOMS = [
 const EVIDENCE = [
   { label: "Machine failure", rows: "6,400 rows of context", metric: "98.3%", sub: "accuracy on 1,600 unseen rows" },
   { label: "Customer churn", rows: "8,000 rows of context", metric: "86.9%", sub: "accuracy on 2,000 unseen rows" },
-  { label: "Time to answer", rows: "no training run", metric: "1.5s", sub: "end to end, both of them" },
+  { label: "Time to answer", rows: "nothing was trained", metric: "2.7s", sub: "measured on this site" },
 ];
 
 export default function Home() {
   return (
-    <div className="mx-auto max-w-3xl px-6">
+    <div className="mx-auto max-w-5xl px-6">
       {/* ------------------------------------------------------------ hero */}
-      <section className="pt-24 pb-20 sm:pt-32">
+      <section className="grid items-center gap-12 pt-20 pb-16 lg:grid-cols-[1fr_1.05fr] lg:gap-14 lg:pt-24">
         <Reveal>
-          <p className="eyebrow mb-8">The Prediction Manifesto</p>
-          <h1 className="display text-[2.75rem] sm:text-[4rem]">
-            By 2028, data science will be something you do, not someone you hire.
+          <p className="eyebrow mb-6">The Prediction Manifesto</p>
+          <h1 className="text-[2.1rem] leading-[1.1] tracking-[-0.022em] sm:text-[2.6rem] lg:text-[3rem]">
+            By 2028, predicting will be something you{" "}
+            <span className="text-accent">do</span>, not something you wait for.
           </h1>
+          <p className="mt-7 max-w-[38ch] text-[1.0625rem] text-ink-soft">
+            Bring the table you already have. Point at the column you are missing.
+          </p>
+          <p className="mt-4 max-w-[40ch] text-[0.9375rem] text-muted">
+            The rows where you know the answer teach it. The rows where the cell is empty
+            come back filled in.
+          </p>
+          <div className="mt-9 flex flex-wrap gap-3">
+            <Link href="/predict" className="btn-primary rounded-md px-6 py-3.5 text-[0.9375rem] transition-all">
+              Try it on your own table
+            </Link>
+            <Link href="/board" className="btn-ghost rounded-md px-6 py-3.5 text-[0.9375rem] transition-all">
+              Ask for something
+            </Link>
+          </div>
+        </Reveal>
+
+        <Reveal index={1}>
+          <AsciiField className="rounded-xl border border-line bg-surface p-4 sm:p-5" />
         </Reveal>
       </section>
 
@@ -47,7 +68,7 @@ export default function Home() {
 
       {/* --------------------------------------------------------- the case */}
       <section className="py-20">
-        <Reveal className="space-y-7 text-[1.0625rem] text-ink-soft">
+        <Reveal className="max-w-2xl space-y-7 text-[1.0625rem] text-ink-soft">
           <p>
             The world runs on tables. Every loan, every policy, every shipment, every
             machine that is about to fail exists somewhere as a row with columns. The
@@ -142,7 +163,7 @@ export default function Home() {
 
       {/* ----------------------------------------------------------- closing */}
       <section className="py-20 pb-28">
-        <Reveal className="space-y-7 text-[1.0625rem] text-ink-soft">
+        <Reveal className="max-w-2xl space-y-7 text-[1.0625rem] text-ink-soft">
           <p>
             Most will wait. The fall of a craft is never believed until it is complete.
             But a small fraction will read these axioms as instructions, and they will
@@ -158,13 +179,13 @@ export default function Home() {
         <Reveal index={1} className="mt-12 flex flex-col gap-3 sm:flex-row">
           <Link
             href="/predict"
-            className="rounded-md bg-ink px-6 py-3.5 text-center text-[0.9375rem] text-white transition-colors hover:bg-[#333] active:scale-[0.98]"
+            className="btn-primary rounded-md px-6 py-3.5 text-center text-[0.9375rem] transition-all"
           >
             Predict something
           </Link>
           <Link
             href="/board"
-            className="rounded-md border border-line-strong bg-surface px-6 py-3.5 text-center text-[0.9375rem] text-ink transition-colors hover:border-ink active:scale-[0.98]"
+            className="btn-ghost rounded-md px-6 py-3.5 text-center text-[0.9375rem] transition-all"
           >
             Tell us what you&apos;d predict
           </Link>

@@ -7,7 +7,7 @@ thin public front-end over [Seldon](https://www.neuralk.ai), a tabular foundatio
 model that learns in context: the rows you have already answered become the
 examples, and the rows you have not become the output.
 
-It is the working half of [the manifesto](./prediction_manifesto_v5.md).
+It is the working half of [the manifesto](./prediction_manifesto.md).
 
 ## How it works
 

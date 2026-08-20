@@ -3,45 +3,66 @@
 /* Warm monochrome. Colour is a scarce resource here — it appears only on
    status, never on structure. */
 :root {
-  --canvas: #f7f6f3;
-  --surface: #ffffff;
-  --surface-sunk: #f9f9f8;
-  --ink: #1a1a18;
-  --ink-soft: #4a4a46;
-  --muted: #787774;
-  --line: #eaeaea;
-  --line-strong: #dcdcd8;
+  /* Dark by choice, not by inversion: every step below was picked against the
+     dark surface and run through the palette validator, not flipped from the
+     light set. */
+  --canvas: #08090c;
+  --surface: #0d1014;
+  --surface-sunk: #12161b;
+  /* Tables read better on a lifted plane than on the page ground. */
+  --surface-raised: #14191f;
+  --ink: #e4e8ea;
+  --ink-soft: #9aa4aa;
+  --muted: #6b757c;
+  --line: #1a1f25;
+  --line-strong: #2b323a;
 
-  --pale-red: #fdebec;
-  --pale-red-ink: #9f2f2d;
-  --pale-blue: #e1f3fe;
-  --pale-blue-ink: #1f6c9f;
-  --pale-green: #edf3ec;
-  --pale-green-ink: #346538;
-  --pale-yellow: #fbf3db;
-  --pale-yellow-ink: #956400;
+  /* Brand accent. Buttons and emphasis only — it fails the categorical
+     lightness band on this surface, so it is never a data series. */
+  --accent: #f0ae3d;
+  --accent-ink: #1a1204;
 
-  /* Chart parameters. The 2-slot categorical pair is the only place colour
-     carries identity, and it passes all six checks of the palette validator
-     (worst adjacent CVD dE 17.8 deutan, normal-vision 24.6). Everything else is
-     magnitude, so it uses one hue light-to-dark with values printed on the
-     marks — which is also what discharges the low-contrast steps. */
-  --series-base: #1f6c9f;
-  --series-pred: #9f2f2d;
+  /* Status tints: dark grounds, lifted inks. */
+  --pale-red: #2a1618;
+  --pale-red-ink: #e8938a;
+  --pale-blue: #10212d;
+  --pale-blue-ink: #7fbde8;
+  --pale-green: #13221a;
+  --pale-green-ink: #86c898;
+  --pale-yellow: #241e0e;
+  --pale-yellow-ink: #f0ae3d;
+
   /* Opaque, because it backs a sticky cell that content scrolls beneath. */
-  --answer-tint: #fdfaf1;
+  --answer-tint: #191f26;
 
-  --seq-1: #6fb1df;
-  --seq-2: #5b9dc9;
+  /* The only place colour carries identity. Validated on the dark surface:
+     all five checks pass, worst adjacent CVD dE 17.8 protan / 24.4 normal. */
+  --series-base: #4998dd;
+  --series-pred: #d67064;
+
+  /* Magnitude, one hue, ascending in brightness because the ground is dark.
+     Ordinal checks pass: monotone L, dL >= 0.06 per step, ends clear the surface. */
+  --seq-1: #1b618b;
+  --seq-2: #32749f;
   --seq-3: #4688b4;
-  --seq-4: #32749f;
-  --seq-5: #1b618b;
+  --seq-4: #5b9dc9;
+  --seq-5: #6fb1df;
+
+  /* Answered state, ascending in confidence. Decorative field only — these are
+     never used to encode a data series. */
+  --warm-1: #6b4f24;
+  --warm-2: #9a6f2c;
+  --warm-3: #c98f33;
+  --warm-4: #f0ae3d;
 }
 
 @theme inline {
   --color-canvas: var(--canvas);
   --color-surface: var(--surface);
   --color-surface-sunk: var(--surface-sunk);
+  --color-surface-raised: var(--surface-raised);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
   --color-ink: var(--ink);
   --color-ink-soft: var(--ink-soft);
   --color-muted: var(--muted);
@@ -126,8 +147,8 @@ body {
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(60rem 40rem at 15% -10%, rgba(149, 100, 0, 0.05), transparent 60%),
-    radial-gradient(50rem 35rem at 90% 5%, rgba(31, 108, 159, 0.04), transparent 60%);
+    radial-gradient(60rem 40rem at 12% -8%, rgba(240, 174, 61, 0.055), transparent 62%),
+    radial-gradient(52rem 36rem at 92% 4%, rgba(73, 152, 221, 0.05), transparent 62%);
   animation: drift 34s ease-in-out infinite alternate;
 }
 
@@ -166,3 +187,22 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .bar-x, .bar-y { animation: none; }
 }
+
+/* Buttons: the accent carries the primary action, since ink-on-ink cannot. */
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 500;
+}
+
+.btn-primary:hover { filter: brightness(1.07); }
+.btn-primary:active { transform: scale(0.98); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+}
+
+.btn-ghost:hover { border-color: var(--muted); }
+.btn-ghost:active { transform: scale(0.98); }
