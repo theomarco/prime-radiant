@@ -34,6 +34,16 @@ the column mean. That logic is ported verbatim from Neuralk's own client so resu
 match; re-implementing it in TypeScript would risk silent accuracy drift. Parquet
 support needs `pyarrow` regardless.
 
+### What goes in
+
+Seldon reads numbers. Numeric columns pass through, categorical columns are
+ordinal-encoded, and everything is standard-scaled with nulls imputed to the
+column mean. Free text and identifiers have no meaningful ordinal encoding —
+turning 40,000 customer names into 40,000 integers invents an order that isn't
+there — so they are **dropped**, and the result says which and why. A column is
+dropped when it is empty, averages over 60 characters, has more than 1,000
+distinct values, or is distinct on more than half its rows.
+
 ### What the API accepts
 
 The deployed `/api/v1/inference` endpoint validates `train.y` as `list[int]` — it

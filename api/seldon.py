@@ -335,6 +335,38 @@ def post_inference(x_train, y_train, x_test, task_type):
 MAX_CLASSES = 100
 
 
+MAX_FEATURE_CARDINALITY = 1000
+FREE_TEXT_MEAN_LENGTH = 60
+
+
+def classify_feature(values):
+    """Decide whether a column can serve as a feature.
+
+    Seldon takes numbers. Numeric columns pass through and categoricals are
+    ordinal-encoded, but free text and identifiers have no meaningful ordinal
+    encoding — turning 40,000 distinct customer names into 40,000 integers
+    invents an ordering that isn't there and dilutes the columns that do carry
+    signal. Those get dropped, and the user is told which and why.
+    """
+    non_null = [v for v in values if not is_null_value(v)]
+    if not non_null:
+        return False, "column is empty"
+
+    strings = [v for v in non_null if isinstance(v, str)]
+    if not strings:
+        return True, None
+
+    n_unique = len({str(v) for v in non_null})
+    mean_length = sum(len(v) for v in strings) / len(strings)
+    if mean_length > FREE_TEXT_MEAN_LENGTH:
+        return False, "free text"
+    if n_unique > MAX_FEATURE_CARDINALITY:
+        return False, f"{n_unique} distinct values"
+    if n_unique > 50 and n_unique > len(non_null) * 0.5:
+        return False, "looks like an identifier"
+    return True, None
+
+
 def target_supported(n_labeled, n_unique, task_type):
     """Whether Seldon can take this column as a target.
 
@@ -377,6 +409,7 @@ def action_inspect(job):
         n_unique = len({str(v) for v in non_null})
         task = infer_task_type(non_null) if non_null else None
         supported, reason = target_supported(len(non_null), n_unique, task)
+        usable, note = classify_feature(values)
         col_meta.append({
             "name": name,
             "n_missing": len(values) - len(non_null),
@@ -385,6 +418,8 @@ def action_inspect(job):
             "task_type": task,
             "predictable": supported,
             "reason": reason,
+            "feature": usable,
+            "feature_note": note,
         })
 
     job_update(job["id"], {
@@ -410,9 +445,17 @@ def action_predict(job, target):
     if len(labeled) < 10:
         raise ValueError(f"'{target}' has only {len(labeled)} filled rows. Seldon needs at least 10 to learn from.")
 
-    feature_cols = [c for c in header if c != target]
+    feature_cols, dropped = [], []
+    for name in header:
+        if name == target:
+            continue
+        usable, note = classify_feature(columns[name])
+        (feature_cols if usable else dropped).append(name if usable else {"name": name, "reason": note})
     if not feature_cols:
-        raise ValueError("That file has only one column — there is nothing to predict from.")
+        raise ValueError(
+            "None of the other columns can be used to predict from — they are all empty, "
+            "free text, or identifiers."
+        )
 
     labeled_values = [y_all[i] for i in labeled]
     task_type = infer_task_type(labeled_values)
@@ -509,6 +552,8 @@ def action_predict(job, target):
     return {
         "mode": "evaluate" if evaluating else "predict",
         "target": target,
+        "featuresUsed": len(feature_cols),
+        "droppedFeatures": dropped,
         "taskType": task_type,
         "nContext": len(train_idx),
         "nPredicted": len(test_idx),

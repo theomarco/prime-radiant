@@ -11,6 +11,8 @@ type ColumnMeta = {
   task_type: string | null;
   predictable: boolean;
   reason: string | null;
+  feature: boolean;
+  feature_note: string | null;
 };
 
 type Result = {
@@ -19,6 +21,8 @@ type Result = {
   taskType: string;
   nContext: number;
   nPredicted: number;
+  featuresUsed: number;
+  droppedFeatures: { name: string; reason: string }[];
   durationMs: number;
   metrics: Record<string, number | null> | null;
   preview: { row: number; prediction: unknown; confidence: number | null }[];
@@ -279,6 +283,12 @@ export function PredictClient() {
                       {col.predictable
                         ? `${col.n_unique} distinct · ${col.n_missing.toLocaleString()} blank`
                         : col.reason}
+                      {!col.feature && (
+                        <span className="text-pale-yellow-ink">
+                          {" · ignored as input"}
+                          {col.feature_note ? ` (${col.feature_note})` : ""}
+                        </span>
+                      )}
                     </span>
                   </span>
                   {col.predictable && col.n_missing > 0 && (
@@ -326,6 +336,31 @@ export function PredictClient() {
               <p className="mt-1 text-[0.75rem] text-muted">no training run</p>
             </div>
           </div>
+
+          {result.droppedFeatures.length > 0 && (
+            <div className="rounded-xl border border-line bg-surface p-7">
+              <p className="eyebrow mb-3">
+                Predicted from {result.featuresUsed} column
+                {result.featuresUsed === 1 ? "" : "s"} · {result.droppedFeatures.length} left out
+              </p>
+              <p className="text-[0.9375rem] text-muted">
+                Seldon reads numbers, and categories are encoded as numbers. Free text and
+                identifiers have no meaningful encoding, so these were ignored rather than
+                turned into noise:
+              </p>
+              <ul className="mt-4 flex flex-wrap gap-2">
+                {result.droppedFeatures.map((d) => (
+                  <li
+                    key={d.name}
+                    className="rounded-full bg-surface-sunk px-3 py-1 font-mono text-[0.6875rem] text-ink-soft"
+                  >
+                    {d.name}
+                    <span className="text-muted"> — {d.reason}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {result.metrics && (
             <div className="rounded-xl border border-line bg-surface p-7">
