@@ -41,7 +41,7 @@ const BUFFER = 600;
  *  something to slide in from. */
 const BLEED = 2;
 /** Columns per second. */
-const SPEED = 9;
+const SPEED = 4;
 
 const smoothstep = (a: number, b: number, x: number) => {
   const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
@@ -77,6 +77,7 @@ export function AsciiField({ rows = 22, className = "" }: { rows?: number; class
     let visible = true;
     let raf = 0;
     let previous = 0;
+    let lastRate = 0;
 
     // Measure one character's advance so the fractional slide is exact. The
     // probe copies the pre's resolved font and letter-spacing rather than its
@@ -165,7 +166,10 @@ export function AsciiField({ rows = 22, className = "" }: { rows?: number; class
       }
       pre.style.transform = `translate3d(${-((offset - shift) + BLEED) * ch}px,0,0)`;
 
-      if (readout.current) {
+      // Four times a second is plenty for a number that moves by a digit or
+      // two. Rewriting it every frame was pure waste.
+      if (readout.current && now - lastRate > 250) {
+        lastRate = now;
         // Anchored to the run measured on this site (2,000 rows in 2.7s),
         // drifting in a narrow band. An instrument, not a live meter.
         const rate = 740 + Math.sin(t * 0.55) * 55 + Math.sin(t * 2.1) * 22;
