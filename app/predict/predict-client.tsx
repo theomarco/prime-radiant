@@ -99,16 +99,19 @@ export function PredictClient() {
   const [target, setTarget] = useState("");
   const [result, setResult] = useState<Result | null>(null);
   const [dragging, setDragging] = useState(false);
+  // Some failures are about this file; some are about you, today. Only the
+  // first kind is worth offering a retry for.
+  const [retryable, setRetryable] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
-    setPhase("idle"); setError(null); setFilename(""); setJobId(""); setToken("");
+    setPhase("idle"); setError(null); setFilename(""); setJobId(""); setToken(""); setRetryable(true);
     setColumns([]); setShape(null); setTarget(""); setResult(null);
     if (inputRef.current) inputRef.current.value = "";
   };
 
   const start = useCallback(async (file: File) => {
-    setError(null); setResult(null); setFilename(file.name);
+    setError(null); setResult(null); setRetryable(true); setFilename(file.name);
 
     if (!isAcceptedFile(file.name)) {
       setError("That needs to be a .csv or .parquet file."); return;
@@ -125,6 +128,9 @@ export function PredictClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ filename: file.name, size: file.size }),
       });
+      // 429 is the daily limit, 503 is storage being full. Neither is about the
+      // file, so do not invite the user to pick a different one.
+      if (jobRes.status === 429 || jobRes.status === 503) setRetryable(false);
       const job: { jobId: string; token: string; uploadUrl: string } = await readJson(
         jobRes,
         "Creating the job",
@@ -203,6 +209,19 @@ export function PredictClient() {
     <div
       className={`mx-auto space-y-10 ${phase === "done" ? "max-w-6xl" : "max-w-3xl"}`}
     >
+      {/* First thing in the flow, not the last: an error under the dropzone and
+          the examples is an error you have to go looking for. */}
+      {error && (
+        <div className="rounded-lg border border-line bg-pale-red px-6 py-4 text-[0.875rem] text-pale-red-ink">
+          {error}
+          {retryable && phase === "idle" && filename && (
+            <button onClick={reset} className="ml-3 underline underline-offset-4">
+              Try another file
+            </button>
+          )}
+        </div>
+      )}
+
       {/* ---------------------------------------------------------- dropzone */}
       {phase === "idle" && (
         <>
@@ -518,16 +537,6 @@ export function PredictClient() {
         </div>
       )}
 
-      {error && (
-        <div className="rounded-lg border border-line bg-pale-red px-6 py-4 text-[0.875rem] text-pale-red-ink">
-          {error}
-          {phase === "idle" && filename && (
-            <button onClick={reset} className="ml-3 underline underline-offset-4">
-              Try another file
-            </button>
-          )}
-        </div>
-      )}
     </div>
   );
 }
