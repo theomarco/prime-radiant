@@ -7,11 +7,6 @@ export type Analysis = {
   baseMix: { label: string; count: number; share: number }[];
   confidenceBands?: { from: number; to: number; count: number }[];
   medianConfidence?: number | null;
-  needsReview?: {
-    count: number;
-    threshold: number;
-    rows: { row: number; prediction: unknown; confidence: number }[];
-  };
   groups?: { a: string; b: string; aCount: number; bCount: number };
   drivers?: {
     name: string;
@@ -321,49 +316,6 @@ function ConfusionMatrix({ analysis }: { analysis: Analysis }) {
   );
 }
 
-/* ---------------------------------------------------------------- rows ---- */
-function ReviewList({ analysis, target }: { analysis: Analysis; target: string }) {
-  const review = analysis.needsReview;
-  if (!review || review.count === 0) return null;
-  return (
-    <Panel
-      title={`${review.count.toLocaleString()} rows worth a second look`}
-      note={`These came back under ${pct(review.threshold)} confidence. If you only check some rows by hand, check these — it is where the model is closest to a coin flip.`}
-    >
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-[0.8125rem]">
-          <thead>
-            <tr className="border-b border-line font-mono text-[0.625rem] tracking-wide text-muted uppercase">
-              <th className="py-2 pr-6 font-normal">Row</th>
-              <th className="py-2 pr-6 font-normal">{target}</th>
-              <th className="py-2 font-normal">Confidence</th>
-            </tr>
-          </thead>
-          <tbody className="font-mono">
-            {review.rows.map((r) => (
-              <tr key={r.row} className="border-b border-line last:border-b-0">
-                <td className="py-2 pr-6 text-muted">{r.row}</td>
-                <td className="py-2 pr-6 text-ink">{String(r.prediction)}</td>
-                <td className="py-2">
-                  <span className="flex items-center gap-2">
-                    <span className="h-1.5 w-20 rounded-full bg-surface-sunk">
-                      <span
-                        className="block h-1.5 rounded-full"
-                        style={{ width: `${r.confidence * 100}%`, background: "var(--seq-4)" }}
-                      />
-                    </span>
-                    <span className="text-muted">{pct(r.confidence)}</span>
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Panel>
-  );
-}
-
 export function PredictionAnalysis({
   analysis,
   target,
@@ -377,7 +329,6 @@ export function PredictionAnalysis({
       <ConfidenceChart analysis={analysis} />
       <DriverChart analysis={analysis} />
       <ConfusionMatrix analysis={analysis} />
-      <ReviewList analysis={analysis} target={target} />
     </div>
   );
 }

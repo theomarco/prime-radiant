@@ -72,15 +72,14 @@ For reference: 8,000 context rows and 2,000 predictions round-trip in about 1.5 
 
 Every run comes back with the input columns beside each prediction, and an
 analysis panel underneath: the predicted class mix against the mix in your
-labelled rows, a confidence histogram, the least-confident rows to check by
-hand, which columns most separate the predicted groups, and — when the column
-was already complete — a confusion matrix.
+labelled rows, a confidence histogram, which columns most separate the predicted
+groups, and — when the column was already complete — a confusion matrix.
 
 None of it costs another inference call, which is the point: an answer that
 takes seconds shouldn't become an answer that takes a minute to explain itself.
 The column comparison is an association, not a cause, and says so.
 
-The confusion matrix is usually the most useful of the five. On the bundled churn
+The confusion matrix is usually the most useful of the four. On the bundled churn
 sample the headline is 86% accuracy, and the matrix shows the model catches 140
 of 317 actual churners — the same number, read two ways.
 

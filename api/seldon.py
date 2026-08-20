@@ -333,7 +333,6 @@ def post_inference(x_train, y_train, x_test, task_type):
 
 # -------------------------------------------------------------- analysis ---
 CONFIDENCE_BANDS = ((0.0, 0.6), (0.6, 0.7), (0.7, 0.8), (0.8, 0.9), (0.9, 1.01))
-REVIEW_THRESHOLD = 0.6
 
 
 def _counts_as_shares(values):
@@ -395,7 +394,7 @@ def build_analysis(columns, feature_cols, target, train_idx, test_idx, preds, pr
     analysis["predictedMix"] = _counts_as_shares([str(p) for p in preds])
     analysis["baseMix"] = _counts_as_shares([str(y_all[i]) for i in train_idx])
 
-    # 2. How sure the model is, and which rows a human should check first.
+    # 2. How sure the model is.
     if proba:
         confidences = [max(row) for row in proba[: len(test_idx)]]
         analysis["confidenceBands"] = [
@@ -411,17 +410,6 @@ def build_analysis(columns, feature_cols, target, train_idx, test_idx, preds, pr
         analysis["medianConfidence"] = (
             ordered[mid] if len(ordered) % 2 else (ordered[mid - 1] + ordered[mid]) / 2
         ) if ordered else None
-        low = [
-            {
-                "row": test_idx[n] + 2,
-                "prediction": preds[n] if n < len(preds) else None,
-                "confidence": round(c, 4),
-            }
-            for n, c in enumerate(confidences)
-            if c < REVIEW_THRESHOLD
-        ]
-        low.sort(key=lambda r: r["confidence"])
-        analysis["needsReview"] = {"count": len(low), "threshold": REVIEW_THRESHOLD, "rows": low[:10]}
 
     # 3. How the input columns differ between the two largest predicted groups.
     groups = [g["label"] for g in analysis["predictedMix"][:2]]
