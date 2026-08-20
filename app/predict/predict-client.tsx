@@ -52,7 +52,7 @@ const INFERENCE_DOWN =
 /**
  * Read a JSON response without assuming it is JSON. A failing endpoint can hand
  * back a platform error page, a proxy failure, or nothing at all, and calling
- * .json() on any of those reports a parse error instead of the real cause —
+ * .json() on any of those reports a parse error instead of the real cause
  * which makes the actual problem invisible. Parse defensively and say what
  * happened.
  */
@@ -61,7 +61,7 @@ async function readJson(res: Response, label: string, inference = false) {
 
   // In development the inference endpoint is a rewrite to a separate process.
   // If nothing is listening the dev server answers for it, and the reply is
-  // never JSON — which is the single most likely reason to land here locally.
+  // never JSON, which is the single most likely reason to land here locally.
   const devFunctionDown =
     inference && process.env.NODE_ENV === "development" && !res.ok;
 
@@ -149,7 +149,7 @@ export function PredictClient() {
 
       setColumns(meta.columns);
       setShape({ nRows: meta.nRows, nCols: meta.nCols });
-      // Default to a column that has blanks to fill — that is usually the point.
+      // Default to a column that has blanks to fill. That is usually the point.
       const withBlanks = meta.columns.find((c) => c.predictable && c.n_missing > 0);
       setTarget((withBlanks ?? meta.columns.find((c) => c.predictable))?.name ?? "");
       setPhase("choosing");
@@ -177,6 +177,10 @@ export function PredictClient() {
 
   const loadSample = async (sample: (typeof SAMPLES)[number]) => {
     setError(null);
+    // Move out of the idle state before fetching, not after. Otherwise the whole
+    // idle view sits there through the download with no sign anything happened.
+    setFilename(sample.file);
+    setPhase("uploading");
     try {
       const res = await fetch(`/samples/${sample.file}`);
       if (!res.ok) throw new Error(`Could not fetch that example (HTTP ${res.status}).`);
@@ -184,7 +188,10 @@ export function PredictClient() {
       await start(new File([blob], sample.file, { type: "text/csv" }));
     } catch (e) {
       // start() sets its own error; only report failures from fetching the file.
-      if (e instanceof Error && e.message.startsWith("Could not fetch")) setError(e.message);
+      if (e instanceof Error && e.message.startsWith("Could not fetch")) {
+        setError(e.message);
+        setPhase("idle");
+      }
     }
   };
 
@@ -371,7 +378,7 @@ export function PredictClient() {
                     className="rounded-full bg-surface-sunk px-3 py-1 font-mono text-[0.6875rem] text-ink-soft"
                   >
                     {d.name}
-                    <span className="text-muted"> — {d.reason}</span>
+                    <span className="text-muted"> ({d.reason})</span>
                   </li>
                 ))}
               </ul>
@@ -405,7 +412,7 @@ export function PredictClient() {
           <div className="overflow-hidden rounded-xl border border-line bg-surface-raised">
             <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-7 py-4">
               <p className="text-[0.9375rem] text-ink">
-                First {result.preview.length} rows — answer first, inputs alongside
+                First {result.preview.length} rows, answer first, inputs alongside
               </p>
               <p className="font-mono text-[0.6875rem] tracking-wide text-muted uppercase">
                 {result.previewColumns.length} input column
@@ -449,7 +456,7 @@ export function PredictClient() {
                           <span className="w-16 text-ink">{String(p.prediction)}</span>
                           <span className="flex w-24 items-center gap-2 text-muted">
                             {p.confidence === null ? (
-                              "—"
+                              ""
                             ) : (
                               <>
                                 <span className="h-1.5 w-8 shrink-0 rounded-full bg-surface-sunk">
@@ -469,7 +476,7 @@ export function PredictClient() {
                       </td>
                       {p.values.map((v, i) => (
                         <td key={result.previewColumns[i]} className="px-4 py-2.5 text-ink-soft">
-                          {v === null || v === "" ? <span className="text-muted">—</span> : String(v)}
+                          {v === null || v === "" ? <span className="text-muted"></span> : String(v)}
                         </td>
                       ))}
                     </tr>

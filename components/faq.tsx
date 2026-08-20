@@ -33,7 +33,7 @@ const ITEMS: Item[] = [
     q: "What should it actually look like?",
     a: (
       <>
-        <p>Like this — five customers, and the question is whether they leave.</p>
+        <p>Like this. Five customers, and the question is whether they leave.</p>
         <pre className="mt-4 overflow-x-auto rounded-lg border border-line bg-surface-sunk p-4 font-mono text-[0.75rem] leading-relaxed text-ink-soft">
           {EXAMPLE}
         </pre>
@@ -61,7 +61,7 @@ const ITEMS: Item[] = [
     a: (
       <p>
         Then there is nothing to fill in, so a fifth of it is hidden and guessed back
-        instead. You get a score for how often it was right on rows it could not see —
+        instead. You get a score for how often it was right on rows it could not see
         which is the fastest way to find out whether any of this works on your data before
         you rely on it.
       </p>
@@ -72,11 +72,11 @@ const ITEMS: Item[] = [
     a: (
       <>
         <p>
-          Categories. Yes or no, a status, a grade, which of several outcomes happened —
+          Categories. Yes or no, a status, a grade, which of several outcomes happened
           anything where the answer is one of a set of possibilities.
         </p>
         <p className="mt-3">
-          Not continuous amounts. A price, a temperature, a revenue figure — those are
+          Not continuous amounts. A price, a temperature, a revenue figure: those are
           declined outright rather than quietly turned into buckets, because a bucket is
           not the answer you asked for. The column picker greys those out and says so
           before you commit.
@@ -109,7 +109,7 @@ const ITEMS: Item[] = [
     q: "What happens to my file?",
     a: (
       <p>
-        It is deleted the moment the prediction finishes — the predictions themselves
+        It is deleted the moment the prediction finishes. The predictions themselves
         expire after 24 hours, and a file uploaded but never used is swept within the hour.
         There is no account and no email. The only thing kept about you is a one-way hash
         of your address, used to count uploads against the daily limit and to stop the same

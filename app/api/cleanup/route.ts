@@ -54,7 +54,7 @@ export async function GET(request: Request) {
   if (paths.length) {
     const { error: removeError } = await db.storage.from(UPLOAD_BUCKET).remove(paths);
     // A missing object is the desired end state, so a partial failure here is
-    // not fatal — but do not mark the jobs clean if the call failed outright.
+    // not fatal, but do not mark the jobs clean if the call failed outright.
     if (removeError) {
       return NextResponse.json({ error: removeError.message }, { status: 500 });
     }

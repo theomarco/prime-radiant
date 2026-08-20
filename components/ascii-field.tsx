@@ -5,8 +5,8 @@ import { useEffect, useRef } from "react";
 /**
  * Rows arrive unknown on the right, stream left, and leave answered.
  *
- * The important decomposition: a column's *identity* travels with the data —
- * its confidence, its threshold, its noise — while whether it counts as
+ * The important decomposition: a column's *identity* travels with the data
+ * its confidence, its threshold, its noise. Whether it counts as
  * answered depends only on where it currently is. So nothing about the
  * transition moves; the data moves through it.
  *
@@ -16,7 +16,7 @@ import { useEffect, useRef } from "react";
  * than others, and a hard boundary would imply a cutoff the product does not
  * have.
  *
- * Runs off React state on purpose — reconciling a few thousand glyphs per frame
+ * Runs off React state on purpose, reconciling a few thousand glyphs per frame
  * would cost more than the animation is worth. The loop writes one HTML string,
  * with runs of a single colour collapsed into one span.
  */
@@ -27,7 +27,7 @@ const WARM = ["--warm-1", "--warm-2", "--warm-3", "--warm-4"];
 
 /**
  * Where certainty accumulates, left to right. A transition 0.26 wide centred at
- * 0.52 — wide enough to read as a zone where cells are being decided, narrow
+ * 0.52, wide enough to read as a zone where cells are being decided, narrow
  * enough that both ends stay decisively answered and unknown. A hard edge read
  * as a loading bar; the full-width gradient lost "answered" as a distinct state.
  */
@@ -122,7 +122,7 @@ export function AsciiField({ rows = 22, className = "" }: { rows?: number; class
       }
 
       if (readout.current) {
-        // Anchored to the run measured on this site — 2,000 rows in 2.7s —
+        // Anchored to the run measured on this site (2,000 rows in 2.7s),
         // drifting in a narrow band. An instrument, not a live meter.
         const rate = 740 + Math.sin(t * 0.06) * 55 + Math.sin(t * 0.23) * 22;
         readout.current.textContent = `${Math.round(rate).toLocaleString("en")} rows/s`;

@@ -1,4 +1,4 @@
-# Prime Radiant — build plan
+# Prime Radiant, build plan
 
 Decisions locked (2026-08-19):
 - v1 runs **real Seldon predictions**, not a waitlist.
@@ -9,7 +9,7 @@ Decisions locked (2026-08-19):
 Next.js 16 (App Router, TS, Tailwind 4) on Vercel + one **Python** function for
 inference (preprocessing parity with the canonical `predict.py`; parquet needs pyarrow).
 
-Upload flow — file goes **direct to Supabase Storage** via signed URL, never through Vercel:
+Upload flow, file goes **direct to Supabase Storage** via signed URL, never through Vercel:
 1. `POST /api/jobs` (TS) → rate-check, create job row, return signed upload URL
 2. client PUTs file straight to Storage
 3. `POST /api/inspect` (PY) → validate rows/cols, return columns + candidate targets
@@ -24,8 +24,8 @@ rows with it empty = the rows to predict. No train/test split to explain.
 - [ ] Scaffold Next.js app, wire Tailwind
 - [ ] Supabase schema + RLS: `jobs`, `ideas`, `idea_votes`; private `uploads` bucket
 - [ ] Landing page (manifesto)
-- [ ] `/predict` — upload → target picker → results
-- [ ] `/board` — 2-question form + upvotes
+- [ ] `/predict`, upload → target picker → results
+- [ ] `/board`, 2-question form + upvotes
 - [ ] Python inference function (`inspect` + `predict`)
 - [ ] Env vars local + Vercel
 - [ ] Deploy, verify end-to-end with a real CSV
@@ -35,7 +35,7 @@ rows with it empty = the rows to predict. No train/test split to explain.
 - Legacy Supabase `service_role` JWT was printed in full by the CLI this session.
   Disable legacy JWT keys in Settings → API Keys; use `sb_publishable_`/`sb_secret_` only.
 
-## Review — 2026-08-19
+## Review, 2026-08-19
 
 All tasks above are done except the production deploy, which the permission
 classifier blocks (outward-facing publish). Everything else is verified.
@@ -54,7 +54,7 @@ rows), both round-tripping in about 1.5-2.6 s.
    label-encoded and decoded around the call, and continuous targets are declined
    with a reason. Column eligibility is computed during inspect so the picker
    explains this before the user commits. This contradicts the seldon skill's own
-   docs, which claim regression support — worth raising with the API team.
+   docs, which claim regression support, worth raising with the API team.
 
 2. **Dropped cross-runtime identity derivation.** The first design had the Python
    function recompute the visitor's IP+UA hash to authorise a job. It broke the
@@ -71,7 +71,7 @@ rows), both round-tripping in about 1.5-2.6 s.
    forever, which is the entire storage budget. Added a daily cron that
    sweeps anything over 24 h and marks it cleaned.
 
-5. **`vercel dev` cannot serve the Python function** in a Next.js project — the dev
+5. **`vercel dev` cannot serve the Python function** in a Next.js project, the dev
    server owns every route. Added `npm run dev:seldon` plus a development-only
    rewrite so local dev actually works. Confirmed via `vercel build` that the
    function *is* produced for production (`python3.12`, maxDuration 300) and that

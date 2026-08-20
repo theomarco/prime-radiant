@@ -35,7 +35,7 @@ function Tip({
 }: {
   label: string;
   children: ReactNode;
-  /** Must establish a width for percentage-sized marks — see the bar call sites. */
+  /** Must establish a width for percentage-sized marks. See the bar call sites. */
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -72,8 +72,8 @@ function Panel({ title, note, children }: { title: string; note?: string; childr
 
 /* -------------------------------------------------------------- the mix --- */
 /** Grouped bars: classes are the categories, and the two series are "what you
- *  gave us" vs "what came back". Making the series the pair — rather than one
- *  hue per class — means this reads the same for two classes or twenty. */
+ *  gave us" vs "what came back". Making the series the pair, rather than one
+ *  hue per class, means this reads the same for two classes or twenty. */
 function MixChart({ analysis, target }: { analysis: Analysis; target: string }) {
   const labels = Array.from(
     new Set([...analysis.baseMix.map((d) => d.label), ...analysis.predictedMix.map((d) => d.label)]),
@@ -100,7 +100,7 @@ function MixChart({ analysis, target }: { analysis: Analysis; target: string }) 
       title={`How often each ${target} came back`}
       note={
         biggestGap > 0.15
-          ? `The predicted mix differs from your labelled rows by up to ${pct(biggestGap)}. That can be real — or a sign the rows you left blank aren't like the ones you filled in.`
+          ? `The predicted mix differs from your labelled rows by up to ${pct(biggestGap)}. That can be real, or a sign the rows you left blank aren't like the ones you filled in.`
           : "Close to the mix in your labelled rows, which is the first thing worth checking."
       }
     >
@@ -219,7 +219,7 @@ function DriverChart({ analysis }: { analysis: Analysis }) {
   return (
     <Panel
       title={`What separates "${groups.a}" from "${groups.b}"`}
-      note="How differently each column behaves between the two predicted groups. This is an association, not a cause — a column can look decisive because it tracks something else that is."
+      note="How differently each column behaves between the two predicted groups. This is an association, not a cause. A column can look decisive because it tracks something else that is."
     >
       <div className="space-y-4">
         {drivers.map((d, i) => {
@@ -236,7 +236,7 @@ function DriverChart({ analysis }: { analysis: Analysis }) {
                 <span className="shrink-0 text-[0.75rem] text-muted">{detail}</span>
               </div>
               <Tip
-                label={`${d.name} — separation ${d.separation.toFixed(2)} (${d.kind})`}
+                label={`${d.name}, separation ${d.separation.toFixed(2)} (${d.kind})`}
                 className="flex w-full"
               >
                 <span

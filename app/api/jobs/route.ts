@@ -14,7 +14,7 @@ function bad(message: string, status = 400) {
 }
 
 /** Create a job row and hand back a signed URL so the file goes straight to
- *  Storage — it never passes through a Vercel function. */
+ *  Storage. It never passes through a Vercel function. */
 export async function POST(request: Request) {
   let body: { filename?: unknown; size?: unknown };
   try {
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
   if (countError) return bad(countError.message, 500);
   if ((count ?? 0) >= UPLOADS_PER_DAY) {
     return bad(
-      `That's ${UPLOADS_PER_DAY} predictions in 24 hours — the daily limit. Try again tomorrow.`,
+      `That's ${UPLOADS_PER_DAY} predictions in 24 hours, the daily limit. Try again tomorrow.`,
       429,
     );
   }
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
   const { data: used, error: usedError } = await db.rpc("live_storage_bytes");
   if (usedError) return bad(usedError.message, 500);
   if (Number(used ?? 0) + size > GLOBAL_STORAGE_BYTES) {
-    return bad("Storage is full right now. Files clear within 24 hours — try again shortly.", 503);
+    return bad("Storage is full right now. Files clear within 24 hours. Try again shortly.", 503);
   }
 
   const { data: job, error: insertError } = await db

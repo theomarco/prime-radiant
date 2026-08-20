@@ -70,7 +70,7 @@ export function BoardClient() {
   };
 
   const vote = async (id: string) => {
-    // optimistic — the server is the arbiter, but the button should feel instant
+    // optimistic, the server is the arbiter, but the button should feel instant
     setIdeas((prev) =>
       (prev ?? []).map((i) =>
         i.id === id
@@ -132,7 +132,7 @@ export function BoardClient() {
             {submitting ? "Posting…" : "Post it"}
           </button>
           <span className="text-[0.8125rem] text-muted">
-            No account, no email. {thanks && <span className="text-pale-green-ink">Posted — thank you.</span>}
+            No account, no email. {thanks && <span className="text-pale-green-ink">Posted, thank you.</span>}
           </span>
         </div>
         {error && (

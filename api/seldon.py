@@ -265,7 +265,7 @@ def _sb_request(method, path, data=None, headers=None, timeout=60):
 
 def storage_download(path):
     # Deleted objects keep being served from the CDN on the plain object path, so
-    # bust the cache on every read — otherwise a job could be re-run against a
+    # bust the cache on every read, otherwise a job could be re-run against a
     # file we already promised the user we had thrown away.
     nonce = uuid.uuid4().hex
     return _sb_request("GET", f"/storage/v1/object/{BUCKET}/{path}?t={nonce}", timeout=120)
@@ -382,7 +382,7 @@ def build_analysis(columns, feature_cols, target, train_idx, test_idx, preds, pr
 
     Deliberately no extra inference: the point of the product is that an answer
     costs seconds, and spending ten more round trips on permutation importance
-    would trade that away. What is here is descriptive — how the predictions are
+    would trade that away. What is here is descriptive, how the predictions are
     distributed, how confident they are, which rows to look at by hand, and how
     the input columns differ between the predicted groups. That last one is an
     association, not a cause, and is labelled as such in the UI.
@@ -464,7 +464,7 @@ def classify_feature(values):
 
     Seldon takes numbers. Numeric columns pass through and categoricals are
     ordinal-encoded, but free text and identifiers have no meaningful ordinal
-    encoding — turning 40,000 distinct customer names into 40,000 integers
+    encoding, turning 40,000 distinct customer names into 40,000 integers
     invents an ordering that isn't there and dilutes the columns that do carry
     signal. Those get dropped, and the user is told which and why.
     """
@@ -498,13 +498,13 @@ def target_supported(n_labeled, n_unique, task_type):
     if n_labeled < 10:
         return False, "needs at least 10 filled rows to learn from"
     if task_type == "regression":
-        return False, "continuous values — Seldon's API takes categories, not numbers to estimate"
+        return False, "continuous values, Seldon's API takes categories, not numbers to estimate"
     if n_unique < 2:
-        return False, "every row has the same value — nothing to tell apart"
+        return False, "every row has the same value, nothing to tell apart"
     if n_unique > MAX_CLASSES:
-        return False, f"{n_unique} distinct values — too many categories to predict"
+        return False, f"{n_unique} distinct values, too many categories to predict"
     if n_unique > n_labeled / 2:
-        return False, "nearly every row is its own category — this looks like an identifier"
+        return False, "nearly every row is its own category, this looks like an identifier"
     return True, None
 
 
@@ -515,12 +515,12 @@ def action_inspect(job):
     if not header:
         raise ValueError("That file has no readable header row.")
     if len(header) > MAX_COLS:
-        raise ValueError(f"{len(header)} columns — the limit is {MAX_COLS}.")
+        raise ValueError(f"{len(header)} columns, the limit is {MAX_COLS}.")
     n_rows = len(columns[header[0]]) if header else 0
     if n_rows == 0:
         raise ValueError("That file has a header but no data rows.")
     if n_rows > MAX_ROWS:
-        raise ValueError(f"{n_rows:,} rows — the limit is {MAX_ROWS:,}.")
+        raise ValueError(f"{n_rows:,} rows, the limit is {MAX_ROWS:,}.")
 
     col_meta = []
     for name in header:
@@ -573,7 +573,7 @@ def action_predict(job, target):
         (feature_cols if usable else dropped).append(name if usable else {"name": name, "reason": note})
     if not feature_cols:
         raise ValueError(
-            "None of the other columns can be used to predict from — they are all empty, "
+            "None of the other columns can be used to predict from, they are all empty, "
             "free text, or identifiers."
         )
 
@@ -661,7 +661,7 @@ def action_predict(job, target):
         "duration_ms": duration_ms,
     })
 
-    # The preview carries the input values too — a prediction with no row beside
+    # The preview carries the input values too, a prediction with no row beside
     # it is unreadable. Column count is capped so the payload stays small; the
     # full table is in the download.
     preview_cols = feature_cols[:40]

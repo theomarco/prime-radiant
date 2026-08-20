@@ -94,7 +94,7 @@ export default function Home() {
               <p className="eyebrow mb-4">The old craft</p>
               <p className="display text-3xl">Six figures, six months</p>
               <p className="mt-4 text-[0.9375rem] text-muted">
-                Feature engineering, tuning, validation — a priesthood&apos;s ritual to
+                Feature engineering, tuning, validation: a priesthood&apos;s ritual to
                 answer a single question. Who leaves. Who defaults. What breaks next.
               </p>
             </div>
@@ -142,21 +142,29 @@ export default function Home() {
       {/* ---------------------------------------------------------- evidence */}
       <section className="py-20">
         <Reveal>
-          <p className="eyebrow mb-3">Not an argument — a measurement</p>
+          <p className="eyebrow mb-3">Not an argument. A measurement</p>
           <p className="max-w-xl text-[1.0625rem] text-ink-soft">
             Three public benchmarks, run through this site&apos;s own endpoint. No training,
             no tuning, no feature engineering. The table went in as it was.
           </p>
         </Reveal>
-        <div className="mt-10 grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-10 space-y-px overflow-hidden rounded-xl border border-line bg-line">
           {EVIDENCE.map((item, i) => (
-            <Reveal key={item.label} index={i} className="bg-surface p-8">
-              <p className="eyebrow mb-5">{item.label}</p>
-              <p className={item.metricSmall ? "display text-[1.85rem]" : "display text-[2.5rem]"}>{item.metric}</p>
-              <p className="mt-2 text-[0.8125rem] text-muted">{item.sub}</p>
-              <p className="mt-5 font-mono text-[0.6875rem] tracking-wide text-muted">
-                {item.rows}
-              </p>
+            <Reveal key={item.label} index={i} className="bg-surface">
+              <div className="flex flex-col gap-4 p-7 sm:flex-row sm:items-baseline sm:justify-between sm:gap-10 sm:px-8">
+                <div className="sm:max-w-[24rem]">
+                  <p className="text-[1.0625rem] text-ink">{item.label}</p>
+                  <p className="mt-1 font-mono text-[0.6875rem] tracking-wide text-muted uppercase">
+                    {item.rows}
+                  </p>
+                </div>
+                <div className="sm:text-right">
+                  <p className={item.metricSmall ? "display text-[1.85rem]" : "display text-[2.25rem]"}>
+                    {item.metric}
+                  </p>
+                  <p className="mt-1 text-[0.8125rem] text-muted">{item.sub}</p>
+                </div>
+              </div>
             </Reveal>
           ))}
         </div>

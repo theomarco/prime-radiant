@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { BoardClient } from "./board-client";
 
 export const metadata: Metadata = {
-  title: "The board — Prime Radiant",
+  title: "The board · Prime Radiant",
   description:
     "Two questions: what do you want to predict, and what would you do with it. Vote on what gets built next.",
 };

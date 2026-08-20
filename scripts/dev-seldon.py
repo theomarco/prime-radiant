@@ -2,7 +2,7 @@
 """Serve api/seldon.py locally so `next dev` can reach it.
 
 On Vercel the Python function is served by the platform's filesystem phase, but
-the Next dev server owns every route locally — so `vercel dev` returns its 404
+the Next dev server owns every route locally, so `vercel dev` returns its 404
 page for /api/seldon. This runs the same handler on its own port; next.config.ts
 rewrites /api/seldon here in development only.
 

@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Warm monochrome. Colour is a scarce resource here — it appears only on
+/* Colour is a scarce resource here. It appears only on
    status, never on structure. */
 :root {
   /* Dark by choice, not by inversion: every step below was picked against the
@@ -17,7 +17,7 @@
   --line: #1a1f25;
   --line-strong: #2b323a;
 
-  /* Brand accent. Buttons and emphasis only — it fails the categorical
+  /* Brand accent. Buttons and emphasis only. It fails the categorical
      lightness band on this surface, so it is never a data series. */
   --accent: #f0ae3d;
   --accent-ink: #1a1204;
@@ -48,7 +48,7 @@
   --seq-4: #5b9dc9;
   --seq-5: #6fb1df;
 
-  /* Answered state, ascending in confidence. Decorative field only — these are
+  /* Answered state, ascending in confidence. Decorative field only. These are
      never used to encode a data series. */
   --warm-1: #6b4f24;
   --warm-2: #9a6f2c;
@@ -116,7 +116,7 @@ body {
   color: var(--muted);
 }
 
-/* Scroll entry — transform/opacity only. */
+/* Scroll entry, transform/opacity only. */
 .reveal {
   opacity: 0;
   transform: translateY(12px);
@@ -206,3 +206,16 @@ body {
 
 .btn-ghost:hover { border-color: var(--muted); }
 .btn-ghost:active { transform: scale(0.98); }
+
+/* Tailwind v4's preflight gives buttons cursor:default. Interactive things
+   should look interactive; set it once here rather than per component. */
+button:not(:disabled),
+[role="button"]:not(:disabled),
+label:has(> input[type="file"]),
+summary {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}

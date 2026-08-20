@@ -1,4 +1,4 @@
--- Prime Radiant — initial schema
+-- Prime Radiant, initial schema
 -- Everything is written server-side with the service key. RLS is enabled with
 -- zero policies, so the anon role has no direct access to any table.
 

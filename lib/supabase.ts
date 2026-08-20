@@ -4,7 +4,7 @@ let cached: SupabaseClient | null = null;
 
 /**
  * Service-role client. Every table has RLS on with zero policies, so this is
- * the only way in — all access is mediated by our route handlers, which is
+ * the only way in, all access is mediated by our route handlers, which is
  * where rate limiting and identity hashing live.
  */
 export function serviceClient(): SupabaseClient {

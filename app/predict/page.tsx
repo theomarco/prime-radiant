@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { PredictClient } from "./predict-client";
 
 export const metadata: Metadata = {
-  title: "Predict — Prime Radiant",
+  title: "Predict · Prime Radiant",
   description: "Upload a table, pick the column you want filled in, get predictions.",
 };
 
