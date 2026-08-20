@@ -36,8 +36,8 @@ PREDICTION_KEYS = ("predictions", "y_pred", "yhat", "y", "preds")
 PROBA_KEYS = ("probabilities", "proba", "y_proba", "probas")
 NULL_TOKENS = {"", "nan", "null", "none", "na", "n/a"}
 
-MAX_ROWS = 200_000
-MAX_COLS = 200
+MAX_ROWS = 500_000
+MAX_COLS = 400
 BUCKET = "uploads"
 HOLDOUT_FRAC = 0.2
 SEED = 42

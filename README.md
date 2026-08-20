@@ -61,12 +61,14 @@ cannot work and says why, instead of failing after you commit.
 
 | | |
 |---|---|
-| File size | 10 MB |
-| Shape | 200,000 rows, 200 columns |
+| File size | 50 MB |
+| Shape | 500,000 rows, 400 columns |
 | Rate | 3 predictions per day per visitor |
-| Retention | source deleted on completion, predictions after 24 h |
+| Retention | source deleted on completion, predictions after 24 h, abandoned uploads after 1 h |
 
-For reference: 8,000 context rows and 2,000 predictions round-trip in about 1.5 s.
+For reference: 227,845 context rows across 30 columns — a 171 MB request — came back in 46 s.
+Seldon is not the binding constraint; the function that parses the file and builds
+that request is.
 
 ## Reading the predictions
 

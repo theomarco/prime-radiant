@@ -26,8 +26,11 @@ const AXIOMS = [
 ];
 
 const EVIDENCE = [
-  { label: "Machine failure", rows: "6,400 rows of context", metric: "98.3%", sub: "accuracy on 1,600 unseen rows" },
-  { label: "Customer churn", rows: "8,000 rows of context", metric: "86.9%", sub: "accuracy on 2,000 unseen rows" },
+  { label: "Which machines fail", rows: "6,400 rows of context", metric: "98.3%", sub: "right, on 1,600 unseen rows" },
+  { label: "Which customers leave", rows: "8,000 rows of context", metric: "86.9%", sub: "right, on 2,000 unseen rows" },
+  // Accuracy would read 99.95% here and mean nothing: guessing "not fraud" every
+  // time scores 99.83%. The count of frauds actually caught is the honest figure.
+  { label: "Which card charges are fraud", rows: "227,845 rows of context", metric: "79 of 98", metricSmall: true, sub: "frauds found in 56,962 rows, 9 false alarms" },
   { label: "Time to answer", rows: "nothing was trained", metric: "2.7s", sub: "measured on this site" },
 ];
 
@@ -141,15 +144,15 @@ export default function Home() {
         <Reveal>
           <p className="eyebrow mb-3">Not an argument — a measurement</p>
           <p className="max-w-xl text-[1.0625rem] text-ink-soft">
-            Two public benchmarks, run through this site&apos;s own endpoint. No training,
+            Three public benchmarks, run through this site&apos;s own endpoint. No training,
             no tuning, no feature engineering. The table went in as it was.
           </p>
         </Reveal>
-        <div className="mt-10 grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-3">
+        <div className="mt-10 grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
           {EVIDENCE.map((item, i) => (
             <Reveal key={item.label} index={i} className="bg-surface p-8">
               <p className="eyebrow mb-5">{item.label}</p>
-              <p className="display text-[2.5rem]">{item.metric}</p>
+              <p className={item.metricSmall ? "display text-[1.85rem]" : "display text-[2.5rem]"}>{item.metric}</p>
               <p className="mt-2 text-[0.8125rem] text-muted">{item.sub}</p>
               <p className="mt-5 font-mono text-[0.6875rem] tracking-wide text-muted">
                 {item.rows}

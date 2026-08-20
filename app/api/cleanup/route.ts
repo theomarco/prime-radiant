@@ -10,7 +10,10 @@ import { serviceClient, UPLOAD_BUCKET } from "@/lib/supabase";
  * Vercel Cron sends `Authorization: Bearer $CRON_SECRET` when that env var is
  * set; anything else is refused so this cannot be triggered from outside.
  */
-const RETENTION_HOURS = 24;
+const RESULT_RETENTION_HOURS = 24;
+/** A file uploaded and never predicted is dead weight, and at 50 MB a few of
+ *  them would exhaust the storage budget long before a daily sweep. */
+const ABANDONED_RETENTION_HOURS = 1;
 
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -22,16 +25,28 @@ export async function GET(request: Request) {
   }
 
   const db = serviceClient();
-  const cutoff = new Date(Date.now() - RETENTION_HOURS * 60 * 60 * 1000).toISOString();
+  const hours = (n: number) => new Date(Date.now() - n * 60 * 60 * 1000).toISOString();
 
-  const { data: stale, error } = await db
-    .from("jobs")
-    .select("id,storage_path,result_path")
-    .is("cleaned_at", null)
-    .lt("created_at", cutoff)
-    .limit(500);
+  const [finished, abandoned] = await Promise.all([
+    db
+      .from("jobs")
+      .select("id,storage_path,result_path")
+      .is("cleaned_at", null)
+      .in("status", ["done", "error"])
+      .lt("created_at", hours(RESULT_RETENTION_HOURS))
+      .limit(500),
+    db
+      .from("jobs")
+      .select("id,storage_path,result_path")
+      .is("cleaned_at", null)
+      .in("status", ["awaiting_upload", "uploaded", "inspected", "running"])
+      .lt("created_at", hours(ABANDONED_RETENTION_HOURS))
+      .limit(500),
+  ]);
+  const error = finished.error ?? abandoned.error;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  if (!stale?.length) return NextResponse.json({ swept: 0, bytesFreed: 0 });
+  const stale = [...(finished.data ?? []), ...(abandoned.data ?? [])];
+  if (!stale.length) return NextResponse.json({ swept: 0, objectsRemoved: 0 });
 
   const paths = stale.flatMap((job) =>
     [job.storage_path, job.result_path].filter((p): p is string => Boolean(p)),
@@ -51,5 +66,10 @@ export async function GET(request: Request) {
     .in("id", stale.map((job) => job.id));
   if (markError) return NextResponse.json({ error: markError.message }, { status: 500 });
 
-  return NextResponse.json({ swept: stale.length, objectsRemoved: paths.length });
+  return NextResponse.json({
+    swept: stale.length,
+    finished: finished.data?.length ?? 0,
+    abandoned: abandoned.data?.length ?? 0,
+    objectsRemoved: paths.length,
+  });
 }
