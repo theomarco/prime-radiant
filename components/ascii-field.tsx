@@ -19,7 +19,7 @@ const WARM = ["--warm-1", "--warm-2", "--warm-3", "--warm-4"];
 
 export function AsciiField({ rows = 22, className = "" }: { rows?: number; className?: string }) {
   const ref = useRef<HTMLPreElement>(null);
-  const counter = useRef<HTMLSpanElement>(null);
+  const readout = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const pre = ref.current;
@@ -40,21 +40,29 @@ export function AsciiField({ rows = 22, className = "" }: { rows?: number; class
     let visible = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
+    // The band wraps on the column count, so the answer front rotates through
+    // for ever instead of filling up and starting over. Nothing resets, which
+    // is what a process that never stops should look like.
+    const BAND = 0.72;
+
     const paint = () => {
-      const front = ((t * 0.55) % (C + 26)) - 8;
+      const front = (t * 0.55) % C;
       let html = "";
       for (let y = 0; y < rows; y++) {
         let run = "";
         let runTone = "";
         for (let x = 0; x < C; x++) {
-          const d = front + Math.sin(y * 1.7 + x * 0.3) * 2.2 - x;
+          // circular distance behind the front, so the seam never shows
+          const raw = front + Math.sin(y * 1.7 + x * 0.3) * 2.2 - x;
+          const d = ((raw % C) + C) % C;
+          const behind = d < C * BAND;
           const c = confidence[y * C + x] ?? 0.6;
           let ch: string;
           let col: string;
-          if (d > 2.5) {
+          if (behind && d > 2.5) {
             col = warm[Math.min(3, Math.floor(c * 4))];
             ch = SOLID[Math.min(SOLID.length - 1, Math.floor(c * SOLID.length))];
-          } else if (d > -2.5) {
+          } else if (d <= 2.5 || d > C - 2.5) {
             col = cool[3];
             ch = SOLID[(Math.random() * SOLID.length) | 0];
           } else {
@@ -74,13 +82,18 @@ export function AsciiField({ rows = 22, className = "" }: { rows?: number; class
         html += "\n";
       }
       pre.innerHTML = html;
-      if (counter.current) {
-        const done = Math.max(0, Math.min(1, front / C));
-        counter.current.textContent =
-          done >= 1 ? "8,000 answered" : `${Math.round(done * 8000).toLocaleString("en")} answered`;
+      if (readout.current) {
+        // Anchored to the measured run on this site — 2,000 rows in 2.7s —
+        // drifting inside a narrow band so it reads as a live instrument
+        // rather than a fixed label.
+        const rate = 740 + Math.sin(t * 0.06) * 55 + Math.sin(t * 0.23) * 22;
+        readout.current.textContent = `${Math.round(rate).toLocaleString("en")} rows/s`;
       }
-      if (front > C + 16) {
-        confidence = new Float32Array(C * rows).map(() => 0.35 + Math.random() * 0.65);
+      // cells re-roll as the front passes them, so confidence keeps moving
+      const edge = Math.floor(front);
+      for (let y = 0; y < rows; y++) {
+        const i = y * C + ((edge + 3) % C);
+        confidence[i] = 0.35 + Math.random() * 0.65;
       }
     };
 
@@ -117,16 +130,23 @@ export function AsciiField({ rows = 22, className = "" }: { rows?: number; class
 
   return (
     <div className={className}>
-      <div className="flex items-baseline justify-between border-b border-line px-1 pb-3">
-        <span className="eyebrow">8,000 rows · one empty column</span>
-        <span className="eyebrow" ref={counter}>
-          reading
+      <div className="flex items-baseline justify-between gap-4 border-b border-line px-1 pb-3">
+        <span className="eyebrow truncate">answering continuously</span>
+        {/* Fixed width and tabular figures: this string changes every frame, and
+            an intrinsically-sized cell would resize the grid column and reflow
+            the copy beside it on every tick. */}
+        <span
+          ref={readout}
+          className="eyebrow shrink-0 text-right whitespace-nowrap tabular-nums"
+          style={{ width: "12ch" }}
+        >
+          740 rows/s
         </span>
       </div>
       <pre
         ref={ref}
         aria-hidden="true"
-        className="mt-4 overflow-hidden font-mono text-[11px] leading-[1.12] tracking-[1.4px] select-none sm:text-[12px]"
+        className="mt-4 w-full min-w-0 overflow-hidden font-mono text-[11px] leading-[1.12] tracking-[1.4px] select-none sm:text-[12px]"
       />
       <div className="mt-4 flex items-center gap-2.5 border-t border-line pt-3">
         <span className="eyebrow">unknown</span>

@@ -35,7 +35,7 @@ export default function Home() {
   return (
     <div className="mx-auto max-w-5xl px-6">
       {/* ------------------------------------------------------------ hero */}
-      <section className="grid items-center gap-12 pt-20 pb-16 lg:grid-cols-[1fr_1.05fr] lg:gap-14 lg:pt-24">
+      <section className="grid items-center gap-12 pt-20 pb-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-14 lg:pt-24">
         <Reveal>
           <p className="eyebrow mb-6">The Prediction Manifesto</p>
           <h1 className="text-[2.1rem] leading-[1.1] tracking-[-0.022em] sm:text-[2.6rem] lg:text-[3rem]">
@@ -59,7 +59,7 @@ export default function Home() {
           </div>
         </Reveal>
 
-        <Reveal index={1}>
+        <Reveal index={1} className="min-w-0">
           <AsciiField className="rounded-xl border border-line bg-surface p-4 sm:p-5" />
         </Reveal>
       </section>
