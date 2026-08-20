@@ -82,14 +82,28 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               </a>
               , a tabular foundation model.
             </p>
-            <p className="font-mono text-[0.6875rem] tracking-wider uppercase">
+            {/* The mark is the link; the words are not. Padding is pulled back by
+                the negative margin so a 12px glyph still gets a 24px hit area
+                without shifting the baseline. */}
+            <p className="flex items-center gap-2.5 font-mono text-[0.6875rem] tracking-wider uppercase">
+              Follow the progress
               <a
                 href="https://x.com/theomarcolini"
                 target="_blank"
                 rel="noreferrer"
-                className="hover:text-ink"
+                aria-label="Follow Theo Marcolini on X"
+                title="Follow Theo Marcolini on X"
+                className="-m-1.5 inline-flex p-1.5 text-muted transition-colors hover:text-ink"
               >
-                Follow the progress
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  aria-hidden="true"
+                >
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
               </a>
             </p>
           </div>
