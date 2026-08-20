@@ -12,10 +12,9 @@ const newsreader = Newsreader({
   weight: ["300", "400", "500"],
 });
 
-const TAGLINE =
-  "By 2028, predicting will be something you do, not something you wait for.";
+const TAGLINE = "You have the past and the present. Find out what comes next.";
 const BLURB =
-  "Bring a table. Point at the column you are missing. No training run, no feature engineering.";
+  "Bring the table as it is. Point at the column you are missing. No training run, no feature engineering.";
 
 export const metadata: Metadata = {
   // Without this, Next emits a relative og:image path and crawlers that require

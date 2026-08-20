@@ -42,11 +42,13 @@ export default function Home() {
         <Reveal>
           <p className="eyebrow mb-6">The Prediction Manifesto</p>
           <h1 className="text-[2.1rem] leading-[1.1] tracking-[-0.022em] sm:text-[2.6rem] lg:text-[3rem]">
-            By 2028, predicting will be something you{" "}
-            <span className="text-accent">do</span>, not something you wait for.
+            You have the past and the present.{" "}
+            {/* Own line: the two clauses are a contrast, and inline the accent
+                phrase broke mid-sentence at most widths. */}
+            <span className="block text-accent">Find out what comes next.</span>
           </h1>
           <p className="mt-7 max-w-[38ch] text-[1.0625rem] text-ink-soft">
-            Bring the table you already have. Point at the column you are missing.
+            Bring the table as it is. Point at the column you are missing.
           </p>
           <p className="mt-4 max-w-[40ch] text-[0.9375rem] text-muted">
             The rows where you know the answer teach it. The rows where the cell is empty
