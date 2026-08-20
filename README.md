@@ -112,9 +112,17 @@ development only.
 
 ## Sample data
 
-`public/samples/` holds two public benchmark tables so the site is usable without
-your own data: bank customer churn and machine failure (UCI AI4I 2020). Both are
-reshaped into the one-file form the site expects.
+`public/samples/` holds five public benchmarks so the site is usable without your
+own data: bank customer churn, machine failure (UCI AI4I 2020), online shopper
+intent, credit score (three classes, shipped as parquet so that path is covered
+too) and card fraud. All are reshaped into the one-file form the site expects.
+
+Card fraud is a 40,000-row stratified sample of 284,807, keeping the real 0.17%
+fraud rate rather than enriching the positives, because the imbalance is what
+makes that benchmark worth showing. The full file is 115 MB, over the upload cap.
+
+`UNLIMITED_KEY` lifts the daily cap for `/predict?mode=<key>`. It never lifts the
+global storage guard, and leaving it unset disables the feature.
 
 ## Stack
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { LIMITS_COPY, MAX_FILE_BYTES, isAcceptedFile } from "@/lib/limits";
 import { PredictionAnalysis, type Analysis } from "@/components/analysis";
 import { Faq } from "@/components/faq";
@@ -42,8 +42,11 @@ type Result = {
 type Phase = "idle" | "uploading" | "inspecting" | "choosing" | "predicting" | "done";
 
 const SAMPLES = [
-  { file: "bank-churn.csv", label: "Bank customers", hint: "Will this customer leave?", target: "Exited" },
-  { file: "machine-failure.csv", label: "Machine sensors", hint: "Will this machine fail?", target: "target" },
+  { file: "bank-churn.csv", label: "Bank customers", hint: "Will this one leave?", size: "10,000 rows" },
+  { file: "machine-failure.csv", label: "Machine sensors", hint: "Will this one fail?", size: "8,000 rows" },
+  { file: "online-shoppers.csv", label: "Web sessions", hint: "Will this one buy?", size: "12,330 rows" },
+  { file: "credit-score.parquet", label: "Credit files", hint: "Good, standard or poor?", size: "99,960 rows · parquet" },
+  { file: "card-fraud.csv", label: "Card payments", hint: "Which charges are fraud?", size: "40,000 rows · 9 MB" },
 ];
 
 const INFERENCE_DOWN =
@@ -102,6 +105,13 @@ export function PredictClient() {
   // Some failures are about this file; some are about you, today. Only the
   // first kind is worth offering a retry for.
   const [retryable, setRetryable] = useState(true);
+  // Read once from the URL rather than useSearchParams, which would force this
+  // statically prerendered page to become dynamic.
+  const [mode, setMode] = useState("");
+  useEffect(() => {
+    setMode(new URLSearchParams(window.location.search).get("mode") ?? "");
+  }, []);
+  const [unlimited, setUnlimited] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
@@ -126,15 +136,14 @@ export function PredictClient() {
       const jobRes = await fetch("/api/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: file.name, size: file.size }),
+        body: JSON.stringify({ filename: file.name, size: file.size, mode }),
       });
       // 429 is the daily limit, 503 is storage being full. Neither is about the
       // file, so do not invite the user to pick a different one.
       if (jobRes.status === 429 || jobRes.status === 503) setRetryable(false);
-      const job: { jobId: string; token: string; uploadUrl: string } = await readJson(
-        jobRes,
-        "Creating the job",
-      );
+      const job: { jobId: string; token: string; uploadUrl: string; unlimited?: boolean } =
+        await readJson(jobRes, "Creating the job");
+      if (job.unlimited) setUnlimited(true);
 
       const put = await fetch(job.uploadUrl, { method: "PUT", body: file });
       if (!put.ok) throw new Error("The upload did not complete. Try again.");
@@ -256,13 +265,18 @@ export function PredictClient() {
               onChange={(e) => { const f = e.target.files?.[0]; if (f) void start(f); }}
             />
             <p className="mt-7 font-mono text-[0.6875rem] tracking-wide text-muted uppercase">
-              CSV or Parquet · {LIMITS_COPY.file} · {LIMITS_COPY.rows} · {LIMITS_COPY.perDay}
+              CSV or Parquet · {LIMITS_COPY.file} · {LIMITS_COPY.rows} ·{" "}
+              {unlimited ? (
+                <span className="text-accent">no daily limit</span>
+              ) : (
+                LIMITS_COPY.perDay
+              )}
             </p>
           </div>
 
           <div>
             <p className="eyebrow mb-4">Or try one of these</p>
-            <div className="grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2">
+            <div className="grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
               {SAMPLES.map((s) => (
                 <button
                   key={s.file}
@@ -271,9 +285,16 @@ export function PredictClient() {
                 >
                   <p className="text-[0.9375rem] text-ink">{s.label}</p>
                   <p className="mt-1 text-[0.8125rem] text-muted">{s.hint}</p>
+                  <p className="mt-3 font-mono text-[0.625rem] tracking-wide text-muted uppercase">
+                    {s.size}
+                  </p>
                 </button>
               ))}
             </div>
+            <p className="mt-4 text-[0.8125rem] text-muted">
+              Public benchmarks, reshaped into the one-file form above. Card payments is a
+              40,000-row sample of 284,807, keeping the real fraud rate of 0.17%.
+            </p>
           </div>
 
           <div className="pt-6">

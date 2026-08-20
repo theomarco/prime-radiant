@@ -16,7 +16,7 @@ function bad(message: string, status = 400) {
 /** Create a job row and hand back a signed URL so the file goes straight to
  *  Storage. It never passes through a Vercel function. */
 export async function POST(request: Request) {
-  let body: { filename?: unknown; size?: unknown };
+  let body: { filename?: unknown; size?: unknown; mode?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -36,6 +36,11 @@ export async function POST(request: Request) {
   const db = serviceClient();
   const ipHash = await identityHash();
 
+  // A shared key lifts the daily count for whoever holds the link. It never
+  // lifts the global storage guard, which exists to keep the site up.
+  const key = process.env.UNLIMITED_KEY;
+  const unlimited = Boolean(key) && body.mode === key;
+
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { count, error: countError } = await db
     .from("jobs")
@@ -43,7 +48,7 @@ export async function POST(request: Request) {
     .eq("ip_hash", ipHash)
     .gte("created_at", since);
   if (countError) return bad(countError.message, 500);
-  if ((count ?? 0) >= UPLOADS_PER_DAY) {
+  if (!unlimited && (count ?? 0) >= UPLOADS_PER_DAY) {
     return bad(
       `That's ${UPLOADS_PER_DAY} predictions in 24 hours, the daily limit. Try again tomorrow.`,
       429,
@@ -81,6 +86,7 @@ export async function POST(request: Request) {
     token: job.access_token,
     uploadUrl: signed.signedUrl,
     path: storagePath,
+    unlimited,
   });
 }
 
