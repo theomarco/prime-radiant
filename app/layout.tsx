@@ -12,15 +12,29 @@ const newsreader = Newsreader({
   weight: ["300", "400", "500"],
 });
 
+const TAGLINE =
+  "By 2028, predicting will be something you do, not something you wait for.";
+const BLURB =
+  "Bring a table. Point at the column you are missing. No training run, no feature engineering.";
+
 export const metadata: Metadata = {
+  // Without this, Next emits a relative og:image path and crawlers that require
+  // an absolute URL fall back to no image at all.
+  metadataBase: new URL("https://prime-radiant-chi.vercel.app"),
   title: "Prime Radiant",
-  description:
-    "By 2028, data science will be something you do, not someone you hire. Upload a table, pick a column, get predictions.",
+  description: `${TAGLINE} ${BLURB}`,
   openGraph: {
     title: "Prime Radiant",
-    description:
-      "By 2028, data science will be something you do, not someone you hire.",
+    description: TAGLINE,
     type: "website",
+    siteName: "Prime Radiant",
+    url: "/",
+  },
+  twitter: {
+    // "summary" gives the small thumbnail card; this is the wide one.
+    card: "summary_large_image",
+    title: "Prime Radiant",
+    description: TAGLINE,
   },
 };
 
