@@ -116,10 +116,21 @@ body {
   color: var(--muted);
 }
 
-/* Scroll entry, transform/opacity only. */
+/* Scroll entry, transform/opacity only. Hiding content until script runs is a
+   real risk on a page whose whole job is to be read, so the hidden state is
+   opt-in: with no scripting the content is simply there. The component also
+   carries a failsafe timer for the case where script runs but the observer
+   never fires. */
 .reveal {
   opacity: 0;
   transform: translateY(12px);
+}
+
+@media (scripting: none) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .reveal-in {

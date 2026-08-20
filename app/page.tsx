@@ -70,8 +70,12 @@ export default function Home() {
       <hr className="border-line" />
 
       {/* --------------------------------------------------------- the case */}
-      <section className="py-20">
-        <Reveal className="max-w-2xl space-y-7 text-[1.0625rem] text-ink-soft">
+      <section className="grid gap-6 py-20 lg:grid-cols-[9rem_minmax(0,1fr)] lg:gap-12">
+        <Reveal>
+          <p className="eyebrow lg:pt-1.5">The case</p>
+        </Reveal>
+        <div>
+        <Reveal className="max-w-[68ch] space-y-7 text-[1.0625rem] text-ink-soft">
           <p>
             The world runs on tables. Every loan, every policy, every shipment, every
             machine that is about to fail exists somewhere as a row with columns. The
@@ -111,14 +115,15 @@ export default function Home() {
             The fall of the old craft is certain. Only its duration is negotiable.
           </p>
         </Reveal>
+        </div>
       </section>
 
       <hr className="border-line" />
 
       {/* ------------------------------------------------------------ axioms */}
-      <section className="py-20">
+      <section className="grid gap-6 py-20 lg:grid-cols-[9rem_minmax(0,1fr)] lg:gap-12">
         <Reveal>
-          <p className="eyebrow mb-10">The axioms</p>
+          <p className="eyebrow lg:pt-1.5">The axioms</p>
         </Reveal>
         <ol className="space-y-px overflow-hidden rounded-xl border border-line bg-line">
           {AXIOMS.map((axiom, i) => (
@@ -140,10 +145,13 @@ export default function Home() {
       <hr className="border-line" />
 
       {/* ---------------------------------------------------------- evidence */}
-      <section className="py-20">
+      <section className="grid gap-6 py-20 lg:grid-cols-[9rem_minmax(0,1fr)] lg:gap-12">
         <Reveal>
-          <p className="eyebrow mb-3">Not an argument. A measurement</p>
-          <p className="max-w-xl text-[1.0625rem] text-ink-soft">
+          <p className="eyebrow lg:pt-1.5">The measurement</p>
+        </Reveal>
+        <div>
+        <Reveal>
+          <p className="max-w-[62ch] text-[1.0625rem] text-ink-soft">
             Three public benchmarks, run through this site&apos;s own endpoint. No training,
             no tuning, no feature engineering. The table went in as it was.
           </p>
@@ -168,13 +176,18 @@ export default function Home() {
             </Reveal>
           ))}
         </div>
+        </div>
       </section>
 
       <hr className="border-line" />
 
       {/* ----------------------------------------------------------- closing */}
-      <section className="py-20 pb-28">
-        <Reveal className="max-w-2xl space-y-7 text-[1.0625rem] text-ink-soft">
+      <section className="grid gap-6 py-20 lg:grid-cols-[9rem_minmax(0,1fr)] lg:gap-12 pb-28">
+        <Reveal>
+          <p className="eyebrow lg:pt-1.5">What follows</p>
+        </Reveal>
+        <div>
+        <Reveal className="max-w-[68ch] space-y-7 text-[1.0625rem] text-ink-soft">
           <p>
             Most will wait. The fall of a craft is never believed until it is complete.
             But a small fraction will read these axioms as instructions, and they will
@@ -192,15 +205,16 @@ export default function Home() {
             href="/predict"
             className="btn-primary rounded-md px-6 py-3.5 text-center text-[0.9375rem] transition-all"
           >
-            Predict something
+            Try it on your own table
           </Link>
           <Link
             href="/board"
             className="btn-ghost rounded-md px-6 py-3.5 text-center text-[0.9375rem] transition-all"
           >
-            Tell us what you&apos;d predict
+            Ask for something
           </Link>
         </Reveal>
+        </div>
       </section>
     </div>
   );

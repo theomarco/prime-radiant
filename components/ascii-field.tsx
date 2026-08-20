@@ -37,6 +37,11 @@ const GRADIENT_TO = 0.65;
 const FRINGE = 0.073;
 /** Data buffer, wider than any viewport's column count. */
 const BUFFER = 600;
+/** Columns of bleed either side, hidden by the container, so the slide has
+ *  something to slide in from. */
+const BLEED = 2;
+/** Columns per second. */
+const SPEED = 9;
 
 const smoothstep = (a: number, b: number, x: number) => {
   const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
@@ -67,43 +72,61 @@ export function AsciiField({ rows = 22, className = "" }: { rows?: number; class
     let noise = rand();
 
     let offset = 0;
+    let lastShift = -1;
     let t = 0;
     let visible = true;
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    let raf = 0;
+    let previous = 0;
 
-    const paint = () => {
-      const shift = Math.floor(offset);
+    // Measure one character's advance so the fractional slide is exact. The
+    // probe copies the pre's resolved font and letter-spacing rather than its
+    // classes, which carry layout too.
+    const charWidth = () => {
+      const cs = getComputedStyle(pre);
+      const probe = document.createElement("span");
+      probe.style.cssText = "position:absolute;visibility:hidden;white-space:pre";
+      probe.style.font = cs.font;
+      probe.style.letterSpacing = cs.letterSpacing;
+      probe.textContent = "0".repeat(100);
+      pre.parentElement?.appendChild(probe);
+      const w = probe.getBoundingClientRect().width / 100;
+      probe.remove();
+      return w || 7;
+    };
+    let ch = charWidth();
+
+    const paint = (shift: number) => {
       let html = "";
       for (let y = 0; y < rows; y++) {
         let run = "";
         let runTone = "";
-        for (let x = 0; x < C; x++) {
+        for (let x = -BLEED; x < C + BLEED; x++) {
           const di = (((x + shift) % BUFFER) + BUFFER) % BUFFER;
           const i = y * BUFFER + di;
-          const u = x / (C - 1); // 0 at the left, 1 at the right
+          const u = Math.min(1, Math.max(0, x / (C - 1))); // 0 at the left, 1 at the right
           // chance this column has been answered by the time it reaches x
           const p = 1 - smoothstep(GRADIENT_FROM, GRADIENT_TO, u);
           const th = threshold[i];
           const c = confidence[i];
 
-          let ch: string;
+          let glyph: string;
           let col: string;
           if (th < p - FRINGE) {
             // answered: glyph from confidence alone, so it travels without flickering
             col = warm[Math.min(3, Math.floor(c * 4))];
-            ch = SOLID[Math.min(SOLID.length - 1, Math.floor(c * SOLID.length))];
+            glyph = SOLID[Math.min(SOLID.length - 1, Math.floor(c * SOLID.length))];
           } else if (th < p + FRINGE) {
             col = cool[3];
-            ch = SOLID[(Math.random() * SOLID.length) | 0];
+            glyph = SOLID[(Math.random() * SOLID.length) | 0];
           } else {
             col = cool[Math.min(3, Math.floor((1 - u) * 3.2))];
-            ch = NOISE[Math.min(NOISE.length - 1, Math.floor(noise[i] * NOISE.length))];
+            glyph = NOISE[Math.min(NOISE.length - 1, Math.floor(noise[i] * NOISE.length))];
           }
 
-          if (col === runTone) run += ch;
+          if (col === runTone) run += glyph;
           else {
             if (run) html += `<span style="color:${runTone}">${run}</span>`;
-            run = ch;
+            run = glyph;
             runTone = col;
           }
         }
@@ -112,49 +135,64 @@ export function AsciiField({ rows = 22, className = "" }: { rows?: number; class
       }
       pre.innerHTML = html;
 
-      // re-roll the column about to enter on the right, so the stream never loops
-      const entering = (((C + shift) % BUFFER) + BUFFER) % BUFFER;
+      // re-roll the column about to enter, so the stream never loops
+      const entering = (((C + BLEED + shift) % BUFFER) + BUFFER) % BUFFER;
       for (let y = 0; y < rows; y++) {
         const i = y * BUFFER + entering;
         confidence[i] = 0.35 + Math.random() * 0.65;
         threshold[i] = Math.random();
         noise[i] = Math.random();
       }
+    };
+
+    const frame = (now: number) => {
+      raf = requestAnimationFrame(frame);
+      if (!visible || document.hidden) {
+        previous = now;
+        return;
+      }
+      const dt = previous ? Math.min(0.1, (now - previous) / 1000) : 0;
+      previous = now;
+      offset += dt * SPEED;
+      t += dt;
+
+      // Whole columns are re-rendered; the fraction rides on a transform, so
+      // motion is continuous instead of jumping a column every other frame.
+      const shift = Math.floor(offset);
+      if (shift !== lastShift) {
+        paint(shift);
+        lastShift = shift;
+      }
+      pre.style.transform = `translate3d(${-((offset - shift) + BLEED) * ch}px,0,0)`;
 
       if (readout.current) {
         // Anchored to the run measured on this site (2,000 rows in 2.7s),
         // drifting in a narrow band. An instrument, not a live meter.
-        const rate = 740 + Math.sin(t * 0.06) * 55 + Math.sin(t * 0.23) * 22;
+        const rate = 740 + Math.sin(t * 0.55) * 55 + Math.sin(t * 2.1) * 22;
         readout.current.textContent = `${Math.round(rate).toLocaleString("en")} rows/s`;
       }
     };
 
-    const loop = () => {
-      if (visible && !document.hidden) {
-        offset += 0.62;
-        t += 1;
-        paint();
-      }
-      timer = setTimeout(loop, 70);
-    };
-
     const onResize = () => {
       C = columns();
+      ch = charWidth();
+      lastShift = -1;
     };
 
     // Reduced motion gets one composed frame. The gradient is static by design,
     // so a single frame is the whole picture rather than a broken one.
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      paint();
+      paint(0);
+      pre.style.transform = `translate3d(${-BLEED * ch}px,0,0)`;
       return;
     }
 
     const io = new IntersectionObserver(([e]) => (visible = e.isIntersecting), { threshold: 0.05 });
     io.observe(pre);
     addEventListener("resize", onResize);
-    loop();
+    raf = requestAnimationFrame(frame);
     return () => {
-      if (timer) clearTimeout(timer);
+      cancelAnimationFrame(raf);
       io.disconnect();
       removeEventListener("resize", onResize);
     };
@@ -175,11 +213,13 @@ export function AsciiField({ rows = 22, className = "" }: { rows?: number; class
           740 rows/s
         </span>
       </div>
-      <pre
-        ref={ref}
-        aria-hidden="true"
-        className="mt-4 w-full min-w-0 overflow-hidden font-mono text-[11px] leading-[1.12] tracking-[1.4px] select-none sm:text-[12px]"
-      />
+      <div className="mt-4 w-full min-w-0 overflow-hidden">
+        <pre
+          ref={ref}
+          aria-hidden="true"
+          className="font-mono text-[11px] leading-[1.12] tracking-[1.4px] select-none will-change-transform sm:text-[12px]"
+        />
+      </div>
       <div className="mt-4 flex items-center gap-2.5 border-t border-line pt-3">
         <span className="eyebrow">answered</span>
         <span className="flex gap-[2px]" aria-hidden="true">

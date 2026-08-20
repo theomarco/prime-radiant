@@ -19,17 +19,27 @@ export function Reveal({
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
+    const show = () => node.classList.add("reveal-in");
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          node.classList.add("reveal-in");
+          show();
           observer.disconnect();
         }
       },
       { rootMargin: "0px 0px -10% 0px", threshold: 0.05 },
     );
     observer.observe(node);
-    return () => observer.disconnect();
+    // Failsafe: nothing on this page should stay invisible because an observer
+    // did not fire. Worst case the animation is skipped, not the content.
+    const failsafe = setTimeout(() => {
+      show();
+      observer.disconnect();
+    }, 1600);
+    return () => {
+      clearTimeout(failsafe);
+      observer.disconnect();
+    };
   }, []);
 
   return (
