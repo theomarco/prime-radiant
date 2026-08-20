@@ -33,7 +33,7 @@ const ITEMS: Item[] = [
     q: "What should it actually look like?",
     a: (
       <>
-        <p>Like this — six customers, and the question is whether they leave.</p>
+        <p>Like this — five customers, and the question is whether they leave.</p>
         <pre className="mt-4 overflow-x-auto rounded-lg border border-line bg-surface-sunk p-4 font-mono text-[0.75rem] leading-relaxed text-ink-soft">
           {EXAMPLE}
         </pre>

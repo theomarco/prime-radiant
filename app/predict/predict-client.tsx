@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { LIMITS_COPY, MAX_FILE_BYTES, isAcceptedFile } from "@/lib/limits";
 import { PredictionAnalysis, type Analysis } from "@/components/analysis";
+import { Faq } from "@/components/faq";
 
 type ColumnMeta = {
   name: string;
@@ -247,6 +248,10 @@ export function PredictClient() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="pt-6">
+            <Faq />
           </div>
         </>
       )}

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { PredictClient } from "./predict-client";
-import { Faq } from "@/components/faq";
 
 export const metadata: Metadata = {
   title: "Predict — Prime Radiant",
@@ -22,9 +21,6 @@ export default function PredictPage() {
       </div>
       <div className="mt-14">
         <PredictClient />
-      </div>
-      <div className="mx-auto mt-24 max-w-3xl">
-        <Faq />
       </div>
     </div>
   );
