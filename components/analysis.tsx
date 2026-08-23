@@ -19,6 +19,12 @@ export type Analysis = {
     group_b_share?: number;
   }[];
   confusion?: { labels: string[]; matrix: number[][] };
+  distributions?: {
+    col: string;
+    kind: "numeric" | "categorical";
+    bins: string[];
+    groups: { label: string; counts: number[]; total: number }[];
+  }[];
 };
 
 const pct = (n: number) => `${(n * 100).toFixed(n < 0.01 && n > 0 ? 2 : 1)}%`;
@@ -265,53 +271,114 @@ function DriverChart({ analysis }: { analysis: Analysis }) {
   );
 }
 
-/* ----------------------------------------------------------- importance --- */
-/** Mean absolute Shapley contribution per column, over the rows that were
- *  explained. This replaces the difference-of-means panel wherever explanations
- *  exist, because the two disagree: on churn the comparison ranks NumOfProducts
- *  last while Shapley ranks it second. A column whose effect is not monotonic,
- *  churn spikes at three and four products, is invisible to a difference of
- *  averages but plain to the model. */
-function ShapleyImportance({
+/* --------------------------------------------------------- distributions --- */
+/** How each column is spread across the predicted groups, ordered by how much
+ *  it actually contributed. Shares are within a group, not across: the rows
+ *  worth acting on are a small minority, and counts would hide them entirely.
+ *
+ *  This is also what a difference of averages cannot show. On churn the two
+ *  groups average 1.5 and 1.6 products, which reads as irrelevant, while three
+ *  products is 0.3% of one group and 21% of the other. */
+function Distributions({
+  distributions,
   importance,
-  label,
+  actionable,
+  target,
 }: {
-  importance: { col: string; mean: number }[];
-  label: string;
+  distributions: NonNullable<Analysis["distributions"]>;
+  importance?: { col: string; mean: number }[];
+  actionable: string;
+  target: string;
 }) {
-  const top = importance.slice(0, 8);
-  const max = Math.max(...top.map((d) => d.mean), 0.001);
+  const weight = new Map((importance ?? []).map((d) => [d.col, d.mean]));
+  const ranked = [...distributions]
+    .filter((d) => !importance || (weight.get(d.col) ?? 0) >= 0.05)
+    .sort((a, b) => (weight.get(b.col) ?? 0) - (weight.get(a.col) ?? 0))
+    .slice(0, 4);
+  if (!ranked.length) return null;
+
+  const other = ranked[0].groups.find((g) => g.label !== actionable)?.label ?? "";
+  const totals = new Map(ranked[0].groups.map((g) => [g.label, g.total]));
+
   return (
     <Panel
-      title={`What drives the answer “${label}”`}
-      note="Average size of each column's contribution across the rows explained above. Measured by asking the model, not by comparing averages, so a column matters here only if changing it changes the answer."
+      title={`What the rows predicted “${actionable}” look like`}
+      note={`The columns that contributed most, and how each is spread across the two groups. Read as a share of each group rather than of the whole, because the rows worth acting on are the smaller group. A multiplier marks where they are at least twice as concentrated.`}
     >
-      <div className="space-y-4">
-        {top.map((d, i) => (
-          <div key={d.col}>
-            <div className="mb-1.5 flex items-baseline justify-between gap-4">
-              <span className="truncate font-mono text-[0.75rem] text-ink">{d.col}</span>
-              <span className="shrink-0 font-mono text-[0.75rem] text-muted">
-                {(d.mean * 100).toFixed(1)} pts
-              </span>
-            </div>
-            <Tip label={`${d.col}: ${(d.mean * 100).toFixed(1)} points on average`}>
-              <span
-                tabIndex={0}
-                className="flex h-6 w-full items-center outline-none focus-visible:ring-2 focus-visible:ring-ink"
-              >
-                <span
-                  className="bar-x block h-2.5 rounded-r-[4px]"
-                  style={{
-                    width: `max(2px, ${(d.mean / max) * 100}%)`,
-                    background: "var(--series-base)",
-                    ["--index" as string]: i,
-                  }}
-                />
-              </span>
-            </Tip>
-          </div>
+      <div className="mb-6 flex flex-wrap gap-5">
+        {[other, actionable].map((label) => (
+          <span key={label} className="flex items-center gap-2 text-[0.8125rem] text-ink-soft">
+            <span
+              className="h-2.5 w-2.5 rounded-sm"
+              style={{ background: label === actionable ? "var(--series-pred)" : "var(--series-base)" }}
+            />
+            {target} “{label}”, {(totals.get(label) ?? 0).toLocaleString()} rows
+          </span>
         ))}
+      </div>
+
+      <div className="grid gap-x-10 gap-y-8 sm:grid-cols-2">
+        {ranked.map((d) => {
+          const g = Object.fromEntries(d.groups.map((x) => [x.label, x]));
+          const act = g[actionable];
+          const base = g[other];
+          if (!act || !base) return null;
+          const shares = d.bins.map((b, k) => ({
+            bin: b,
+            a: base.counts[k] / Math.max(base.total, 1),
+            c: act.counts[k] / Math.max(act.total, 1),
+          }));
+          const max = Math.max(...shares.flatMap((s) => [s.a, s.c]), 0.01);
+          return (
+            <div key={d.col}>
+              <div className="mb-3 flex items-baseline justify-between gap-3">
+                <span className="truncate font-mono text-[0.8125rem] text-ink">{d.col}</span>
+                {weight.has(d.col) && (
+                  <span className="shrink-0 font-mono text-[0.625rem] tracking-wide text-muted uppercase">
+                    {((weight.get(d.col) ?? 0) * 100).toFixed(0)} pts
+                  </span>
+                )}
+              </div>
+              <div className="space-y-2">
+                {shares.map((s) => {
+                  const lift = s.a > 0 ? s.c / s.a : s.c > 0 ? Infinity : 0;
+                  const marked = s.c > 0.04 && lift >= 2;
+                  return (
+                    <div key={s.bin} className="flex items-center gap-2.5">
+                      <span className="w-20 shrink-0 text-right font-mono text-[0.625rem] text-muted">
+                        {s.bin}
+                      </span>
+                      <span className="grid flex-1 gap-[2px]">
+                        {[s.a, s.c].map((v, i) => (
+                          <Tip
+                            key={i}
+                            className="flex w-full items-center gap-2"
+                            label={`${i ? actionable : other}: ${(v * 100).toFixed(1)}% of that group`}
+                          >
+                            <span
+                              tabIndex={0}
+                              className="block h-[7px] rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ink"
+                              style={{
+                                width: `max(1px, ${(v / max) * 82}%)`,
+                                background: i ? "var(--series-pred)" : "var(--series-base)",
+                              }}
+                            />
+                            <span className="font-mono text-[0.625rem] text-muted">
+                              {(v * 100).toFixed(0)}%
+                            </span>
+                          </Tip>
+                        ))}
+                      </span>
+                      <span className="w-8 shrink-0 font-mono text-[0.625rem] text-accent">
+                        {marked ? (lift === Infinity ? "only" : `x${lift.toFixed(0)}`) : ""}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </Panel>
   );
@@ -403,8 +470,13 @@ export function PredictionAnalysis({
     <div className="space-y-px overflow-hidden rounded-xl bg-line">
       <MixChart analysis={analysis} target={target} />
       <ConfidenceChart analysis={analysis} />
-      {importance && importance.length > 0 ? (
-        <ShapleyImportance importance={importance} label={actionable ?? target} />
+      {analysis.distributions && analysis.distributions.length > 0 && actionable ? (
+        <Distributions
+          distributions={analysis.distributions}
+          importance={importance}
+          actionable={actionable}
+          target={target}
+        />
       ) : (
         <DriverChart analysis={analysis} />
       )}

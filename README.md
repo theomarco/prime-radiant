@@ -93,6 +93,19 @@ perturbation of every row goes in one request. All five samples together were
 Uploads get no explanations. We did the homework for our examples and do not
 pretend to have done it for your file.
 
+## Characterising the group
+
+The columns that contributed most, and how each is distributed across the
+predicted groups. Shares are within a group rather than across, because the rows
+worth acting on are usually the small minority and counts would hide them.
+
+This is the view a comparison of averages cannot give. On churn the two groups
+average 1.5 and 1.6 products, which reads as irrelevant, and a difference of
+means ranked that column last of six. The distribution shows three products is
+0.3% of one group and 21% of the other, a factor of seventy, and Shapley ranks
+the same column second. A column whose effect is not monotonic is invisible to
+an average and obvious here.
+
 ## Reading the predictions
 
 Every run comes back with the input columns beside each prediction, and an

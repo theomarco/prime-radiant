@@ -450,7 +450,7 @@ export function PredictClient() {
                     analysis={result.analysis}
                     target={result.target}
                     importance={explain?.importance}
-                    actionable={explain?.actionable}
+                    actionable={explain?.actionable ?? result.actionable ?? undefined}
                   />
                 )}
               </div>

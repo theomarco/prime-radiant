@@ -377,6 +377,86 @@ def _categorical_separation(a_values, b_values):
     return best
 
 
+DISTRIBUTION_COLUMNS = 12
+DISTRIBUTION_BINS = 6
+
+
+def _compact(x):
+    """125449 -> 125k. Bin labels sit in a narrow column."""
+    a = abs(x)
+    if a >= 1_000_000:
+        return f"{x / 1_000_000:.1f}M".replace(".0M", "M")
+    if a >= 1_000:
+        return f"{x / 1_000:.0f}k"
+    if a >= 10:
+        return f"{x:.0f}"
+    return f"{x:.2g}"
+
+
+def build_distributions(columns, feature_cols, test_idx, preds):
+    """How each column is distributed across the predicted groups.
+
+    Counts are per group, and the UI reads them as a share of the group rather
+    than of the whole: the rows worth acting on are usually a small minority, so
+    raw counts would hide exactly the pattern being looked for. This is also the
+    view that catches a column whose effect is not monotonic, which a comparison
+    of averages cannot see.
+    """
+    labels = sorted({str(p) for p in preds[: len(test_idx)]})
+    out = []
+    for col in feature_cols[:DISTRIBUTION_COLUMNS]:
+        values = [columns[col][i] for i in test_idx]
+        non_null = [v for v in values if not is_null_value(v)]
+        if not non_null:
+            continue
+        distinct = sorted({str(v) for v in non_null})
+        numeric = not any(isinstance(v, str) for v in non_null)
+
+        if numeric and len(distinct) > 10:
+            nums = [float(v) for v in non_null]
+            lo, hi = min(nums), max(nums)
+            span = (hi - lo) or 1.0
+            edges = [lo + span * k / DISTRIBUTION_BINS for k in range(DISTRIBUTION_BINS + 1)]
+            bins = [f"{_compact(edges[k])}-{_compact(edges[k + 1])}" for k in range(DISTRIBUTION_BINS)]
+
+            def which(v, lo=lo, span=span):
+                if is_null_value(v):
+                    return None
+                k = int((float(v) - lo) / span * DISTRIBUTION_BINS)
+                return min(max(k, 0), DISTRIBUTION_BINS - 1)
+
+            kind = "numeric"
+        else:
+            def sort_key(text):
+                try:
+                    return (0, float(text), "")
+                except ValueError:
+                    return (1, 0.0, text)
+
+            bins = sorted(distinct, key=sort_key)[:12]
+            index = {b: k for k, b in enumerate(bins)}
+
+            def which(v, index=index):
+                return None if is_null_value(v) else index.get(str(v))
+
+            kind = "categorical"
+
+        groups = {label: [0] * len(bins) for label in labels}
+        for n, v in enumerate(values):
+            if n >= len(preds):
+                break
+            k = which(v)
+            if k is not None:
+                groups[str(preds[n])][k] += 1
+        out.append({
+            "col": col,
+            "kind": kind,
+            "bins": bins,
+            "groups": [{"label": l, "counts": c, "total": sum(c)} for l, c in groups.items()],
+        })
+    return out
+
+
 def build_analysis(columns, feature_cols, target, train_idx, test_idx, preds, proba, y_all, evaluating):
     """Everything we can say about these predictions without another API call.
 
@@ -701,6 +781,7 @@ def action_predict(job, target):
     analysis = build_analysis(
         columns, feature_cols, target, train_idx, test_idx, preds, proba, y_all, evaluating
     )
+    analysis["distributions"] = build_distributions(columns, feature_cols, test_idx, preds)
 
     return {
         "mode": "evaluate" if evaluating else "predict",
