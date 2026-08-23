@@ -70,6 +70,29 @@ For reference: 227,845 context rows across 30 columns, a 171 MB request, came ba
 Seldon is not the binding constraint; the function that parses the file and builds
 that request is.
 
+## Explaining a prediction
+
+Every bundled example ships with Shapley values for the rows worth acting on,
+precomputed by `scripts/precompute-shap.py` and stored next to the CSV. Only the
+actionable label is explained: nobody works through the customers who are
+staying, so churn explains the 254 leavers rather than all 2,000 rows, and fraud
+explains 10 rather than 8,000. Where that set is still larger than a person can
+work through it is capped at the 200 most certain, and the page says so.
+
+Exact enumeration under 13 features, permutation sampling above, because 2^30 is
+not a number of coalitions anyone enumerates. Absent features are replaced with
+values from real background rows rather than the scaled mean: the mean row is the
+centroid, which is not a customer that exists, and explaining from there put the
+baseline at 68% on a dataset that churns at 20%. With real backgrounds it lands
+at 29%.
+
+It is affordable only because Seldon takes `X_test` as a batch, so every
+perturbation of every row goes in one request. All five samples together were
+5.8 million synthetic rows in about eight minutes.
+
+Uploads get no explanations. We did the homework for our examples and do not
+pretend to have done it for your file.
+
 ## Reading the predictions
 
 Every run comes back with the input columns beside each prediction, and an

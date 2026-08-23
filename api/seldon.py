@@ -453,6 +453,8 @@ def build_analysis(columns, feature_cols, target, train_idx, test_idx, preds, pr
 
 # --------------------------------------------------------------- actions ---
 MAX_CLASSES = 100
+# Rows returned per answer, ranked by confidence.
+RANKED_PER_LABEL = 60
 
 
 MAX_FEATURE_CARDINALITY = 1000
@@ -661,6 +663,25 @@ def action_predict(job, target):
         "duration_ms": duration_ms,
     })
 
+    # Rows grouped by answer and ranked by confidence, because the useful
+    # question is "which ones do I act on first", not "what were the first 25
+    # rows of the file". The rarest answer is the actionable one by default:
+    # nobody works through the customers who are staying.
+    by_label = {}
+    for n, row_idx in enumerate(test_idx):
+        if n >= len(preds):
+            break
+        label = str(preds[n])
+        conf = round(max(proba[n]), 4) if proba and n < len(proba) else None
+        by_label.setdefault(label, []).append({"row": row_idx + 2, "confidence": conf})
+    for rows_for_label in by_label.values():
+        rows_for_label.sort(key=lambda r: -(r["confidence"] or 0))
+    ranked = sorted(
+        ({"label": k, "count": len(v), "rows": v[:RANKED_PER_LABEL]} for k, v in by_label.items()),
+        key=lambda g: g["count"],
+    )
+    actionable = ranked[0]["label"] if ranked else None
+
     # The preview carries the input values too, a prediction with no row beside
     # it is unreadable. Column count is capped so the payload stays small; the
     # full table is in the download.
@@ -685,6 +706,8 @@ def action_predict(job, target):
         "mode": "evaluate" if evaluating else "predict",
         "target": target,
         "featuresUsed": len(feature_cols),
+        "actionable": actionable,
+        "ranked": ranked,
         "droppedFeatures": dropped,
         "taskType": task_type,
         "nContext": len(train_idx),

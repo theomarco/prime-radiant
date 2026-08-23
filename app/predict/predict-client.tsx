@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LIMITS_COPY, MAX_FILE_BYTES, isAcceptedFile } from "@/lib/limits";
 import { PredictionAnalysis, type Analysis } from "@/components/analysis";
+import { Verdict, type Explain, type RankedGroup } from "@/components/verdict";
 import { Faq } from "@/components/faq";
 
 type ColumnMeta = {
@@ -27,6 +28,8 @@ type Result = {
   droppedFeatures: { name: string; reason: string }[];
   durationMs: number;
   metrics: Record<string, number | null> | null;
+  actionable: string | null;
+  ranked: RankedGroup[];
   previewColumns: string[];
   previewTruncated: boolean;
   preview: {
@@ -101,6 +104,10 @@ export function PredictClient() {
   const [shape, setShape] = useState<{ nRows: number; nCols: number } | null>(null);
   const [target, setTarget] = useState("");
   const [result, setResult] = useState<Result | null>(null);
+  // Explanations are prepared offline for the bundled examples, where the
+  // expensive thing can be done properly. Uploads get none for now.
+  const [explain, setExplain] = useState<Explain | null>(null);
+  const [sampleFile, setSampleFile] = useState("");
   const [dragging, setDragging] = useState(false);
   // Some failures are about this file; some are about you, today. Only the
   // first kind is worth offering a retry for.
@@ -116,12 +123,12 @@ export function PredictClient() {
 
   const reset = () => {
     setPhase("idle"); setError(null); setFilename(""); setJobId(""); setToken(""); setRetryable(true);
-    setColumns([]); setShape(null); setTarget(""); setResult(null);
+    setColumns([]); setShape(null); setTarget(""); setResult(null); setExplain(null); setSampleFile("");
     if (inputRef.current) inputRef.current.value = "";
   };
 
   const start = useCallback(async (file: File) => {
-    setError(null); setResult(null); setRetryable(true); setFilename(file.name);
+    setError(null); setResult(null); setExplain(null); setRetryable(true); setFilename(file.name);
 
     if (!isAcceptedFile(file.name)) {
       setError("That needs to be a .csv or .parquet file."); return;
@@ -183,7 +190,17 @@ export function PredictClient() {
         body: JSON.stringify({ action: "predict", jobId, token, target }),
       });
       const data: Result = await readJson(res, "The prediction", true);
-      setResult(data); setPhase("done");
+      setResult(data);
+      setPhase("done");
+      if (sampleFile) {
+        const stem = sampleFile.replace(/\.(csv|parquet|pq)$/i, "");
+        fetch(`/samples/${stem}.explain.json`)
+          .then((r) => (r.ok ? r.json() : null))
+          // Keyed by row number, so a mismatch yields no explanation rather
+          // than the wrong one.
+          .then((e) => setExplain(e && e.target === data.target ? e : null))
+          .catch(() => setExplain(null));
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
       setPhase("choosing");
@@ -195,6 +212,7 @@ export function PredictClient() {
     // Move out of the idle state before fetching, not after. Otherwise the whole
     // idle view sits there through the download with no sign anything happened.
     setFilename(sample.file);
+    setSampleFile(sample.file);
     setPhase("uploading");
     try {
       const res = await fetch(`/samples/${sample.file}`);
@@ -380,181 +398,133 @@ export function PredictClient() {
 
       {/* ----------------------------------------------------------- result */}
       {phase === "done" && result && (
-        <div className="space-y-8">
-          <div className="grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-3">
-            <div className="bg-surface p-7">
-              <p className="eyebrow mb-4">
-                {result.mode === "evaluate" ? "Scored on held-out rows" : "Rows filled in"}
-              </p>
-              <p className="display text-[2.25rem]">{result.nPredicted.toLocaleString()}</p>
-            </div>
-            <div className="bg-surface p-7">
-              <p className="eyebrow mb-4">Learned from</p>
-              <p className="display text-[2.25rem]">{result.nContext.toLocaleString()}</p>
-              <p className="mt-1 text-[0.75rem] text-muted">rows of context</p>
-            </div>
-            <div className="bg-surface p-7">
-              <p className="eyebrow mb-4">Time</p>
-              <p className="display text-[2.25rem]">{(result.durationMs / 1000).toFixed(1)}s</p>
-              <p className="mt-1 text-[0.75rem] text-muted">no training run</p>
-            </div>
-          </div>
+        <div className="space-y-10">
+          <Verdict
+            ranked={result.ranked}
+            explain={explain}
+            downloadUrl={result.downloadUrl}
+            nPredicted={result.nPredicted}
+          />
 
-          {result.droppedFeatures.length > 0 && (
-            <div className="rounded-xl border border-line bg-surface p-7">
-              <p className="eyebrow mb-3">
-                Predicted from {result.featuresUsed} column
-                {result.featuresUsed === 1 ? "" : "s"} · {result.droppedFeatures.length} left out
-              </p>
-              <p className="text-[0.9375rem] text-muted">
-                Seldon reads numbers, and categories are encoded as numbers. Free text and
-                identifiers have no meaningful encoding, so these were ignored rather than
-                turned into noise:
-              </p>
-              <ul className="mt-4 flex flex-wrap gap-2">
-                {result.droppedFeatures.map((d) => (
-                  <li
-                    key={d.name}
-                    className="rounded-full bg-surface-sunk px-3 py-1 font-mono text-[0.6875rem] text-ink-soft"
-                  >
-                    {d.name}
-                    <span className="text-muted"> ({d.reason})</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {result.metrics && (
-            <div className="rounded-xl border border-line bg-surface p-7">
-              <p className="eyebrow mb-2">
-                Your column was already complete, so we hid a fifth of it and guessed it back
-              </p>
-              <div className="mt-4 flex flex-wrap gap-x-10 gap-y-3">
-                {Object.entries(result.metrics)
-                  .filter(([, v]) => typeof v === "number")
-                  .map(([k, v]) => (
-                    <div key={k}>
-                      <p className="display text-2xl">
-                        {k === "accuracy" || k === "f1_macro"
-                          ? `${((v as number) * 100).toFixed(1)}%`
-                          : (v as number).toFixed(3)}
-                      </p>
-                      <p className="font-mono text-[0.6875rem] tracking-wide text-muted uppercase">
-                        {k.replace("_", " ")}
-                      </p>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          )}
-
-          <div className="overflow-hidden rounded-xl border border-line bg-surface-raised">
-            <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-7 py-4">
-              <p className="text-[0.9375rem] text-ink">
-                First {result.preview.length} rows, answer first, inputs alongside
-              </p>
-              <p className="font-mono text-[0.6875rem] tracking-wide text-muted uppercase">
-                {result.previewColumns.length} input column
-                {result.previewColumns.length === 1 ? "" : "s"}
-                {result.previewTruncated ? " (first 40)" : ""} · scroll sideways
-              </p>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-[0.8125rem] whitespace-nowrap">
-                <thead>
-                  <tr className="border-b border-line font-mono text-[0.6875rem] tracking-wide text-muted uppercase">
-                    {/* One pinned cell, not three. Separate sticky columns need
-                        hard-coded left offsets that drift from the widths the
-                        browser actually computes, and the labels collide. */}
-                    <th
-                      className="sticky left-0 z-20 border-r border-line-strong px-5 py-3 text-left font-normal"
-                      style={{ background: "var(--answer-tint)" }}
-                    >
-                      <span className="flex items-center gap-5">
-                        <span className="w-11">Row</span>
-                        <span className="w-16 text-ink">{result.target}</span>
-                        <span className="w-24">Confidence</span>
-                      </span>
-                    </th>
-                    {result.previewColumns.map((c) => (
-                      <th key={c} className="px-4 py-3 text-left font-normal">
-                        {c}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="font-mono">
-                  {result.preview.map((p) => (
-                    <tr key={p.row} className="border-b border-line last:border-b-0">
-                      <td
-                        className="sticky left-0 z-20 border-r border-line-strong px-5 py-2.5"
-                        style={{ background: "var(--answer-tint)" }}
-                      >
-                        <span className="flex items-center gap-5">
-                          <span className="w-11 text-muted">{p.row}</span>
-                          <span className="w-16 text-ink">{String(p.prediction)}</span>
-                          <span className="flex w-24 items-center gap-2 text-muted">
-                            {p.confidence === null ? (
-                              ""
-                            ) : (
-                              <>
-                                <span className="h-1.5 w-8 shrink-0 rounded-full bg-surface-sunk">
-                                  <span
-                                    className="block h-1.5 rounded-full"
-                                    style={{
-                                      width: `${p.confidence * 100}%`,
-                                      background: "var(--seq-4)",
-                                    }}
-                                  />
-                                </span>
-                                {(p.confidence * 100).toFixed(1)}%
-                              </>
-                            )}
-                          </span>
-                        </span>
-                      </td>
-                      {p.values.map((v, i) => (
-                        <td key={result.previewColumns[i]} className="px-4 py-2.5 text-ink-soft">
-                          {v === null || v === "" ? <span className="text-muted"></span> : String(v)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {result.analysis && (
-            <div>
-              <div className="mb-6">
-                <p className="eyebrow mb-2">Reading the predictions</p>
-                <p className="max-w-xl text-[0.9375rem] text-muted">
-                  A prediction is worth the decision it changes, so the useful questions are
-                  whether the mix looks plausible, where the model is unsure, and what
-                  actually separates the groups.
-                </p>
-              </div>
-              <PredictionAnalysis analysis={result.analysis} target={result.target} />
-            </div>
-          )}
-
-          <div className="flex flex-wrap items-center gap-3">
-            <a
-              href={result.downloadUrl}
-              className="btn-primary rounded-md px-6 py-3 text-[0.9375rem] transition-all"
-            >
-              Download all {result.nPredicted.toLocaleString()} predictions
-            </a>
-            <button onClick={reset} className="text-[0.875rem] text-muted hover:text-ink">
-              Predict something else
-            </button>
-          </div>
-          <p className="text-[0.8125rem] text-muted">
-            Your uploaded file was deleted the moment this finished. The predictions expire
-            in 24 hours.
+          <p className="max-w-[70ch] text-[0.8125rem] text-muted">
+            Learned from {result.nContext.toLocaleString()} rows you had already answered, in{" "}
+            {(result.durationMs / 1000).toFixed(1)} seconds. Nothing was trained. Your file was
+            deleted the moment this finished and the predictions expire in 24 hours.
           </p>
+
+          <div className="border-t border-line">
+            {result.metrics && (
+              <details className="border-b border-line">
+                <summary className="flex cursor-pointer items-baseline justify-between gap-6 py-5 text-[0.9375rem] text-ink-soft">
+                  Your column was already complete, so a fifth was hidden and guessed back
+                  <span className="shrink-0 font-mono text-muted">+</span>
+                </summary>
+                <div className="flex flex-wrap gap-x-10 gap-y-3 pb-6">
+                  {Object.entries(result.metrics)
+                    .filter(([, v]) => typeof v === "number")
+                    .map(([k, v]) => (
+                      <div key={k}>
+                        <p className="display text-2xl">
+                          {k === "accuracy" || k === "f1_macro"
+                            ? `${((v as number) * 100).toFixed(1)}%`
+                            : (v as number).toFixed(3)}
+                        </p>
+                        <p className="font-mono text-[0.6875rem] tracking-wide text-muted uppercase">
+                          {k.replace("_", " ")}
+                        </p>
+                      </div>
+                    ))}
+                </div>
+              </details>
+            )}
+
+            <details className="border-b border-line">
+              <summary className="flex cursor-pointer items-baseline justify-between gap-6 py-5 text-[0.9375rem] text-ink-soft">
+                Look closer at how it did
+                <span className="shrink-0 font-mono text-muted">+</span>
+              </summary>
+              <div className="pb-6">
+                {result.analysis && (
+                  <PredictionAnalysis analysis={result.analysis} target={result.target} />
+                )}
+              </div>
+            </details>
+
+            <details className="border-b border-line">
+              <summary className="flex cursor-pointer items-baseline justify-between gap-6 py-5 text-[0.9375rem] text-ink-soft">
+                See the columns that went in
+                <span className="shrink-0 font-mono text-muted">+</span>
+              </summary>
+              <div className="pb-6">
+                {result.droppedFeatures.length > 0 && (
+                  <p className="mb-5 max-w-[66ch] text-[0.875rem] text-muted">
+                    Predicted from {result.featuresUsed} column
+                    {result.featuresUsed === 1 ? "" : "s"}. Left out because they have no
+                    meaningful encoding:{" "}
+                    {result.droppedFeatures.map((d) => `${d.name} (${d.reason})`).join(", ")}.
+                  </p>
+                )}
+                <div className="overflow-hidden rounded-xl border border-line bg-surface-raised">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-left text-[0.8125rem] whitespace-nowrap">
+                      <thead>
+                        <tr className="border-b border-line font-mono text-[0.6875rem] tracking-wide text-muted uppercase">
+                          <th
+                            className="sticky left-0 z-20 border-r border-line-strong px-5 py-3 text-left font-normal"
+                            style={{ background: "var(--answer-tint)" }}
+                          >
+                            <span className="flex items-center gap-5">
+                              <span className="w-11">Row</span>
+                              <span className="w-16 text-ink">{result.target}</span>
+                              <span className="w-24">Confidence</span>
+                            </span>
+                          </th>
+                          {result.previewColumns.map((c) => (
+                            <th key={c} className="px-4 py-3 text-left font-normal">
+                              {c}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="font-mono">
+                        {result.preview.map((p) => (
+                          <tr key={p.row} className="border-b border-line last:border-b-0">
+                            <td
+                              className="sticky left-0 z-20 border-r border-line-strong px-5 py-2.5"
+                              style={{ background: "var(--answer-tint)" }}
+                            >
+                              <span className="flex items-center gap-5">
+                                <span className="w-11 text-muted">{p.row}</span>
+                                <span className="w-16 text-ink">{String(p.prediction)}</span>
+                                <span className="w-24 text-muted">
+                                  {p.confidence === null
+                                    ? "-"
+                                    : `${(p.confidence * 100).toFixed(1)}%`}
+                                </span>
+                              </span>
+                            </td>
+                            {p.values.map((v, i) => (
+                              <td key={result.previewColumns[i]} className="px-4 py-2.5 text-ink-soft">
+                                {v === null || v === "" ? (
+                                  <span className="text-muted">-</span>
+                                ) : (
+                                  String(v)
+                                )}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <button onClick={reset} className="text-[0.875rem] text-muted hover:text-ink">
+            Predict something else
+          </button>
         </div>
       )}
 

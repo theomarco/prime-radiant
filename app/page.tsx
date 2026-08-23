@@ -55,7 +55,7 @@ export default function Home() {
           </p>
           <div className="mt-9 flex flex-wrap gap-3">
             <Link href="/predict" className="btn-primary rounded-md px-6 py-3.5 text-[0.9375rem] transition-all">
-              Try it on your own table
+              Explore
             </Link>
             <Link href="/board" className="btn-ghost rounded-md px-6 py-3.5 text-[0.9375rem] transition-all">
               Ask for something
@@ -211,7 +211,7 @@ export default function Home() {
             href="/predict"
             className="btn-primary rounded-md px-6 py-3.5 text-center text-[0.9375rem] transition-all"
           >
-            Try it on your own table
+            Explore
           </Link>
           <Link
             href="/board"
