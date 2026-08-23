@@ -41,7 +41,7 @@ PERMUTATIONS = 64          # for the sampled path
 BACKGROUNDS = 8            # real rows, never the scaled mean
 CAP = 200                  # a human-sized action list
 MAX_BATCH = 60_000         # synthetic rows per request
-TOP_PARTS = 8              # contributions kept per row
+TOP_PARTS = 12             # contributions kept per row, ranked by size
 
 
 def load_env():
@@ -154,6 +154,7 @@ def run(filename, target, actionable):
     print(f"  {len(batch):,} rows in {took:.1f}s")
 
     out_rows = {}
+    importance = {}
     cursor = 0
     for i in capped:
         if exact:
@@ -184,6 +185,11 @@ def run(filename, target, actionable):
             ({"col": feats[j], "val": te[feats[j]][i], "phi": round(phi[j], 5)} for j in range(m)),
             key=lambda d: -abs(d["phi"]),
         )
+        # Global importance is accumulated over every feature, before the
+        # per-row list is truncated, so the summary is not biased by what each
+        # row happened to rank highly.
+        for j in range(m):
+            importance[feats[j]] = importance.get(feats[j], 0.0) + abs(phi[j])
         kept = parts[:TOP_PARTS]
         rest = sum(p["phi"] for p in parts[TOP_PARTS:])
         out_rows[str(blank[i] + 2)] = {
@@ -200,6 +206,14 @@ def run(filename, target, actionable):
         "explained": len(capped),
         "actionableTotal": len(hits),
         "baseline": round(sum(r["base"] for r in out_rows.values()) / max(len(out_rows), 1), 5),
+        # Mean absolute contribution per column across the explained rows. This
+        # replaces the difference-of-means panel, which ranked NumOfProducts
+        # last on churn while Shapley ranked it second: a column whose effect is
+        # not monotonic is invisible to a comparison of averages.
+        "importance": [
+            {"col": k, "mean": round(v / max(len(out_rows), 1), 5)}
+            for k, v in sorted(importance.items(), key=lambda kv: -kv[1])
+        ],
         "rows": out_rows,
     }
 

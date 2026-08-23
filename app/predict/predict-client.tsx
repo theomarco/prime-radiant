@@ -445,7 +445,12 @@ export function PredictClient() {
               </summary>
               <div className="pb-6">
                 {result.analysis && (
-                  <PredictionAnalysis analysis={result.analysis} target={result.target} />
+                  <PredictionAnalysis
+                    analysis={result.analysis}
+                    target={result.target}
+                    importance={explain?.importance}
+                    actionable={explain?.actionable}
+                  />
                 )}
               </div>
             </details>

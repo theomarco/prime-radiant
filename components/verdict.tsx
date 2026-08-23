@@ -8,6 +8,7 @@ export type Explain = {
   exact: boolean;
   explained: number;
   actionableTotal: number;
+  importance?: { col: string; mean: number }[];
   rows: Record<
     string,
     { p: number; base: number; rest: number; parts: { col: string; val: unknown; phi: number }[] }

@@ -218,8 +218,8 @@ function DriverChart({ analysis }: { analysis: Analysis }) {
 
   return (
     <Panel
-      title={`What separates "${groups.a}" from "${groups.b}"`}
-      note="How differently each column behaves between the two predicted groups. This is an association, not a cause. A column can look decisive because it tracks something else that is."
+      title={`How the two groups differ on average`}
+      note={`Average values for the rows predicted "${groups.a}" against those predicted "${groups.b}". A description of the two groups, not a measure of what drove the answer: a column whose effect is not monotonic can look unimportant here and still matter a great deal.`}
     >
       <div className="space-y-4">
         {drivers.map((d, i) => {
@@ -261,6 +261,58 @@ function DriverChart({ analysis }: { analysis: Analysis }) {
         {groups.aCount.toLocaleString()} rows predicted &quot;{groups.a}&quot; ·{" "}
         {groups.bCount.toLocaleString()} predicted &quot;{groups.b}&quot;
       </p>
+    </Panel>
+  );
+}
+
+/* ----------------------------------------------------------- importance --- */
+/** Mean absolute Shapley contribution per column, over the rows that were
+ *  explained. This replaces the difference-of-means panel wherever explanations
+ *  exist, because the two disagree: on churn the comparison ranks NumOfProducts
+ *  last while Shapley ranks it second. A column whose effect is not monotonic,
+ *  churn spikes at three and four products, is invisible to a difference of
+ *  averages but plain to the model. */
+function ShapleyImportance({
+  importance,
+  label,
+}: {
+  importance: { col: string; mean: number }[];
+  label: string;
+}) {
+  const top = importance.slice(0, 8);
+  const max = Math.max(...top.map((d) => d.mean), 0.001);
+  return (
+    <Panel
+      title={`What drives the answer “${label}”`}
+      note="Average size of each column's contribution across the rows explained above. Measured by asking the model, not by comparing averages, so a column matters here only if changing it changes the answer."
+    >
+      <div className="space-y-4">
+        {top.map((d, i) => (
+          <div key={d.col}>
+            <div className="mb-1.5 flex items-baseline justify-between gap-4">
+              <span className="truncate font-mono text-[0.75rem] text-ink">{d.col}</span>
+              <span className="shrink-0 font-mono text-[0.75rem] text-muted">
+                {(d.mean * 100).toFixed(1)} pts
+              </span>
+            </div>
+            <Tip label={`${d.col}: ${(d.mean * 100).toFixed(1)} points on average`}>
+              <span
+                tabIndex={0}
+                className="flex h-6 w-full items-center outline-none focus-visible:ring-2 focus-visible:ring-ink"
+              >
+                <span
+                  className="bar-x block h-2.5 rounded-r-[4px]"
+                  style={{
+                    width: `max(2px, ${(d.mean / max) * 100}%)`,
+                    background: "var(--series-base)",
+                    ["--index" as string]: i,
+                  }}
+                />
+              </span>
+            </Tip>
+          </div>
+        ))}
+      </div>
     </Panel>
   );
 }
@@ -338,15 +390,24 @@ function ConfusionMatrix({ analysis }: { analysis: Analysis }) {
 export function PredictionAnalysis({
   analysis,
   target,
+  importance,
+  actionable,
 }: {
   analysis: Analysis;
   target: string;
+  /** Present only when Shapley values were precomputed for this file. */
+  importance?: { col: string; mean: number }[];
+  actionable?: string;
 }) {
   return (
     <div className="space-y-px overflow-hidden rounded-xl bg-line">
       <MixChart analysis={analysis} target={target} />
       <ConfidenceChart analysis={analysis} />
-      <DriverChart analysis={analysis} />
+      {importance && importance.length > 0 ? (
+        <ShapleyImportance importance={importance} label={actionable ?? target} />
+      ) : (
+        <DriverChart analysis={analysis} />
+      )}
       <ConfusionMatrix analysis={analysis} />
     </div>
   );
