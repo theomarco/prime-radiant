@@ -252,6 +252,29 @@ export function PredictClient() {
       {/* ---------------------------------------------------------- dropzone */}
       {phase === "idle" && (
         <>
+          <div>
+            <p className="eyebrow mb-4">Start with one of these</p>
+            <div className="grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
+              {SAMPLES.map((s) => (
+                <button
+                  key={s.file}
+                  onClick={() => void loadSample(s)}
+                  className="group bg-surface p-6 text-left transition-colors hover:bg-surface-sunk"
+                >
+                  <p className="text-[0.9375rem] text-ink">{s.label}</p>
+                  <p className="mt-1 text-[0.8125rem] text-muted">{s.hint}</p>
+                  <p className="mt-3 font-mono text-[0.625rem] tracking-wide text-muted uppercase">
+                    {s.size}
+                  </p>
+                </button>
+              ))}
+            </div>
+            <p className="mt-4 text-[0.8125rem] text-muted">
+              Public benchmarks, reshaped into the one-file form above. Card payments is a
+              40,000-row sample of 284,807, keeping the real fraud rate of 0.17%.
+            </p>
+          </div>
+
           <div
             onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
             onDragLeave={() => setDragging(false)}
@@ -264,7 +287,7 @@ export function PredictClient() {
               dragging ? "border-ink bg-surface" : "border-line-strong bg-surface/60"
             }`}
           >
-            <p className="display text-2xl">Drop a table here</p>
+            <p className="display text-2xl">Or bring your own</p>
             <p className="mx-auto mt-3 max-w-sm text-[0.9375rem] text-muted">
               One file. Rows where your answer column is filled teach the model; rows where
               it is blank are the ones you get back.
@@ -292,28 +315,6 @@ export function PredictClient() {
             </p>
           </div>
 
-          <div>
-            <p className="eyebrow mb-4">Or try one of these</p>
-            <div className="grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
-              {SAMPLES.map((s) => (
-                <button
-                  key={s.file}
-                  onClick={() => void loadSample(s)}
-                  className="group bg-surface p-6 text-left transition-colors hover:bg-surface-sunk"
-                >
-                  <p className="text-[0.9375rem] text-ink">{s.label}</p>
-                  <p className="mt-1 text-[0.8125rem] text-muted">{s.hint}</p>
-                  <p className="mt-3 font-mono text-[0.625rem] tracking-wide text-muted uppercase">
-                    {s.size}
-                  </p>
-                </button>
-              ))}
-            </div>
-            <p className="mt-4 text-[0.8125rem] text-muted">
-              Public benchmarks, reshaped into the one-file form above. Card payments is a
-              40,000-row sample of 284,807, keeping the real fraud rate of 0.17%.
-            </p>
-          </div>
 
           <div className="pt-6">
             <Faq />
