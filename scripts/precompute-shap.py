@@ -33,7 +33,11 @@ SAMPLES = {
     "machine-failure.csv": ("target", "1"),
     "online-shoppers.csv": ("Revenue", "True"),
     "credit-score.parquet": ("Credit_Score", "Poor"),
-    "card-fraud.csv": ("Class", "1"),
+    "card-fraud.parquet": ("Class", "1"),
+    "lead-scoring.csv": ("Converted", "1"),
+    "hr-attrition.csv": ("Attrition", "Yes"),
+    "hotel-cancellations.parquet": ("is_canceled", "1"),
+    "late-delivery.csv": ("arrived_late", "1"),
 }
 
 EXACT_MAX_FEATURES = 12

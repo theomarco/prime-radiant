@@ -4,6 +4,38 @@
 // storage a file occupies until it is swept.
 
 export const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50 MB
+
+/* Two regimes, and they must not be confused.
+ *
+ * A file a visitor uploads is arbitrary and untrusted. It is capped on size,
+ * rows and columns, rate limited per person per day, and counted against the
+ * storage ceiling, because every one of those costs something we did not choose
+ * to spend.
+ *
+ * A bundled sample is a file we prepared, checked and shipped. It already sits
+ * on the CDN, it is never uploaded, it occupies no storage, and none of the
+ * limits above apply to it. Anything guarding an upload should be behind an
+ * `isBundledSample` check. */
+export const BUNDLED_SAMPLES = new Set([
+  "bank-churn.csv",
+  "machine-failure.csv",
+  "online-shoppers.csv",
+  "credit-score.parquet",
+  "card-fraud.parquet",
+  "lead-scoring.csv",
+  "hr-attrition.csv",
+  "hotel-cancellations.parquet",
+  "late-delivery.csv",
+]);
+
+export function isBundledSample(filename: string): boolean {
+  return BUNDLED_SAMPLES.has(filename);
+}
+
+/** Public path of a bundled sample, which is also where the runtime reads it. */
+export function samplePath(filename: string): string {
+  return `/samples/${filename}`;
+}
 export const MAX_ROWS = 500_000;
 export const MAX_COLS = 400;
 export const UPLOADS_PER_DAY = 3;

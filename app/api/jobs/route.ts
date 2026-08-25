@@ -7,6 +7,8 @@ import {
   UPLOADS_PER_DAY,
   extensionOf,
   isAcceptedFile,
+  isBundledSample,
+  samplePath,
 } from "@/lib/limits";
 
 function bad(message: string, status = 400) {
@@ -28,10 +30,14 @@ export async function POST(request: Request) {
 
   if (!filename) return bad("Missing filename.");
   if (!isAcceptedFile(filename)) return bad("Only .csv and .parquet files are accepted.");
-  if (!Number.isFinite(size) || size <= 0) return bad("Missing or invalid file size.");
-  if (size > MAX_FILE_BYTES) {
-    return bad(`That file is ${(size / 1048576).toFixed(1)} MB. The limit is 10 MB.`, 413);
+  // Size only matters for something we are about to receive and store.
+  if (!isBundledSample(filename) && (!Number.isFinite(size) || size <= 0)) {
+    return bad("Missing or invalid file size.");
   }
+  // Everything from here to the job insert guards an upload. A bundled sample
+  // is not an upload: it is already on the CDN, so it costs no storage, needs
+  // no signed URL, and is not rated against anyone's daily count.
+  const bundled = isBundledSample(filename);
 
   const db = serviceClient();
   const ipHash = await identityHash();
@@ -41,24 +47,33 @@ export async function POST(request: Request) {
   const key = process.env.UNLIMITED_KEY;
   const unlimited = Boolean(key) && body.mode === key;
 
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count, error: countError } = await db
-    .from("jobs")
-    .select("id", { count: "exact", head: true })
-    .eq("ip_hash", ipHash)
-    .gte("created_at", since);
-  if (countError) return bad(countError.message, 500);
-  if (!unlimited && (count ?? 0) >= UPLOADS_PER_DAY) {
-    return bad(
-      `That's ${UPLOADS_PER_DAY} predictions in 24 hours, the daily limit. Try again tomorrow.`,
-      429,
-    );
-  }
+  if (!bundled) {
+    if (size > MAX_FILE_BYTES) {
+      return bad(
+        `That file is ${(size / 1048576).toFixed(1)} MB. The limit is ${MAX_FILE_BYTES / 1048576} MB.`,
+        413,
+      );
+    }
 
-  const { data: used, error: usedError } = await db.rpc("live_storage_bytes");
-  if (usedError) return bad(usedError.message, 500);
-  if (Number(used ?? 0) + size > GLOBAL_STORAGE_BYTES) {
-    return bad("Storage is full right now. Files clear within 24 hours. Try again shortly.", 503);
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count, error: countError } = await db
+      .from("jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("ip_hash", ipHash)
+      .gte("created_at", since);
+    if (countError) return bad(countError.message, 500);
+    if (!unlimited && (count ?? 0) >= UPLOADS_PER_DAY) {
+      return bad(
+        `That's ${UPLOADS_PER_DAY} predictions in 24 hours, the daily limit. Try again tomorrow.`,
+        429,
+      );
+    }
+
+    const { data: used, error: usedError } = await db.rpc("live_storage_bytes");
+    if (usedError) return bad(usedError.message, 500);
+    if (Number(used ?? 0) + size > GLOBAL_STORAGE_BYTES) {
+      return bad("Storage is full right now. Files clear within 24 hours. Try again shortly.", 503);
+    }
   }
 
   const { data: job, error: insertError } = await db
@@ -67,6 +82,21 @@ export async function POST(request: Request) {
     .select("id,access_token")
     .single();
   if (insertError || !job) return bad(insertError?.message ?? "Could not create job.", 500);
+
+  // A bundled sample is read from where it already lives. Downloading it to the
+  // browser only to push it back into Storage moved the file twice for nothing,
+  // and filled the bucket doing it.
+  if (bundled) {
+    const url = new URL(request.url).origin + samplePath(filename);
+    await db.from("jobs").update({ storage_path: url }).eq("id", job.id);
+    return NextResponse.json({
+      jobId: job.id,
+      token: job.access_token,
+      uploadUrl: null,
+      path: url,
+      unlimited,
+    });
+  }
 
   const storagePath = `${job.id}/source${extensionOf(filename)}`;
   const { data: signed, error: signError } = await db.storage

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { LIMITS_COPY, MAX_FILE_BYTES, isAcceptedFile } from "@/lib/limits";
+import { LIMITS_COPY, MAX_FILE_BYTES, isAcceptedFile, isBundledSample } from "@/lib/limits";
 import { PredictionAnalysis, type Analysis } from "@/components/analysis";
 import { Verdict, type Explain, type RankedGroup } from "@/components/verdict";
 import { Faq } from "@/components/faq";
@@ -45,11 +45,15 @@ type Result = {
 type Phase = "idle" | "uploading" | "inspecting" | "choosing" | "predicting" | "done";
 
 const SAMPLES = [
-  { file: "bank-churn.csv", label: "Bank customers", hint: "Will this one leave?", size: "10,000 rows" },
-  { file: "machine-failure.csv", label: "Machine sensors", hint: "Will this one fail?", size: "8,000 rows" },
-  { file: "online-shoppers.csv", label: "Web sessions", hint: "Will this one buy?", size: "12,330 rows" },
-  { file: "credit-score.parquet", label: "Credit files", hint: "Good, standard or poor?", size: "99,960 rows · parquet" },
-  { file: "card-fraud.csv", label: "Card payments", hint: "Which charges are fraud?", size: "40,000 rows · 9 MB" },
+  { file: "bank-churn.csv", industry: "Banking", label: "Bank customers", hint: "Will this one leave?", rows: "10,000 rows" },
+  { file: "credit-score.parquet", industry: "Banking", label: "Credit files", hint: "Good, standard or poor?", rows: "99,960 rows" },
+  { file: "card-fraud.parquet", industry: "Payments", label: "Card payments", hint: "Which charges are fraud?", rows: "284,807 rows" },
+  { file: "online-shoppers.csv", industry: "Retail", label: "Web sessions", hint: "Will this one buy?", rows: "12,330 rows" },
+  { file: "machine-failure.csv", industry: "Manufacturing", label: "Machine sensors", hint: "Will this one fail?", rows: "8,000 rows" },
+  { file: "lead-scoring.csv", industry: "Education", label: "Sales leads", hint: "Which one converts?", rows: "9,240 rows" },
+  { file: "hr-attrition.csv", industry: "Workforce", label: "Employee records", hint: "Who is about to resign?", rows: "1,470 rows" },
+  { file: "hotel-cancellations.parquet", industry: "Travel", label: "Hotel bookings", hint: "Will this one cancel?", rows: "119,390 rows" },
+  { file: "late-delivery.csv", industry: "Logistics", label: "Parcel shipments", hint: "Will this one arrive late?", rows: "10,999 rows" },
 ];
 
 const INFERENCE_DOWN =
@@ -127,14 +131,17 @@ export function PredictClient() {
     if (inputRef.current) inputRef.current.value = "";
   };
 
-  const start = useCallback(async (file: File) => {
+  const start = useCallback(async (file: File | { name: string }) => {
+    const blob = file instanceof File ? file : null;
     setError(null); setResult(null); setExplain(null); setRetryable(true); setFilename(file.name);
 
     if (!isAcceptedFile(file.name)) {
       setError("That needs to be a .csv or .parquet file."); return;
     }
-    if (file.size > MAX_FILE_BYTES) {
-      setError(`That file is ${(file.size / 1048576).toFixed(1)} MB. The limit is ${LIMITS_COPY.file}.`);
+    // Size, rows and the daily count all guard uploads. A bundled sample is
+    // never uploaded, so none of them apply to it.
+    if (blob && !isBundledSample(blob.name) && blob.size > MAX_FILE_BYTES) {
+      setError(`That file is ${(blob.size / 1048576).toFixed(1)} MB. The limit is ${LIMITS_COPY.file}.`);
       return;
     }
 
@@ -143,17 +150,24 @@ export function PredictClient() {
       const jobRes = await fetch("/api/jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: file.name, size: file.size, mode }),
+        body: JSON.stringify({ filename: file.name, size: blob?.size ?? 0, mode }),
       });
       // 429 is the daily limit, 503 is storage being full. Neither is about the
       // file, so do not invite the user to pick a different one.
       if (jobRes.status === 429 || jobRes.status === 503) setRetryable(false);
-      const job: { jobId: string; token: string; uploadUrl: string; unlimited?: boolean } =
-        await readJson(jobRes, "Creating the job");
+      const job: {
+        jobId: string;
+        token: string;
+        uploadUrl: string | null;
+        unlimited?: boolean;
+      } = await readJson(jobRes, "Creating the job");
       if (job.unlimited) setUnlimited(true);
 
-      const put = await fetch(job.uploadUrl, { method: "PUT", body: file });
-      if (!put.ok) throw new Error("The upload did not complete. Try again.");
+      // No upload URL means the file is a bundled sample and already in place.
+      if (job.uploadUrl) {
+        const put = await fetch(job.uploadUrl, { method: "PUT", body: blob! });
+        if (!put.ok) throw new Error("The upload did not complete. Try again.");
+      }
       setJobId(job.jobId);
       setToken(job.token);
 
@@ -214,18 +228,9 @@ export function PredictClient() {
     setFilename(sample.file);
     setSampleFile(sample.file);
     setPhase("uploading");
-    try {
-      const res = await fetch(`/samples/${sample.file}`);
-      if (!res.ok) throw new Error(`Could not fetch that example (HTTP ${res.status}).`);
-      const blob = await res.blob();
-      await start(new File([blob], sample.file, { type: "text/csv" }));
-    } catch (e) {
-      // start() sets its own error; only report failures from fetching the file.
-      if (e instanceof Error && e.message.startsWith("Could not fetch")) {
-        setError(e.message);
-        setPhase("idle");
-      }
-    }
+    // The runtime reads the sample from the CDN itself. Pulling 66 MB into the
+    // browser only to push it back up was moving the file twice for nothing.
+    await start({ name: sample.file });
   };
 
   const busy = phase === "uploading" || phase === "inspecting" || phase === "predicting";
@@ -261,17 +266,21 @@ export function PredictClient() {
                   onClick={() => void loadSample(s)}
                   className="group bg-surface p-6 text-left transition-colors hover:bg-surface-sunk"
                 >
-                  <p className="text-[0.9375rem] text-ink">{s.label}</p>
+                  <span className="inline-flex rounded-full border border-line bg-surface-sunk px-2 py-0.5 font-mono text-[0.5625rem] tracking-[0.1em] text-muted uppercase">
+                    {s.industry}
+                  </span>
+                  <p className="mt-2.5 text-[0.9375rem] text-ink">{s.label}</p>
                   <p className="mt-1 text-[0.8125rem] text-muted">{s.hint}</p>
                   <p className="mt-3 font-mono text-[0.625rem] tracking-wide text-muted uppercase">
-                    {s.size}
+                    {s.rows}
                   </p>
                 </button>
               ))}
             </div>
             <p className="mt-4 text-[0.8125rem] text-muted">
-              Public benchmarks, reshaped into the one-file form above. Card payments is a
-              40,000-row sample of 284,807, keeping the real fraud rate of 0.17%.
+              Public benchmarks, reshaped into the one-file form above. These run whole and
+              without limits: they are already prepared and already here, so nothing is
+              uploaded and nothing counts against your daily predictions.
             </p>
           </div>
 
@@ -306,7 +315,7 @@ export function PredictClient() {
               onChange={(e) => { const f = e.target.files?.[0]; if (f) void start(f); }}
             />
             <p className="mt-7 font-mono text-[0.6875rem] tracking-wide text-muted uppercase">
-              CSV or Parquet · {LIMITS_COPY.file} · {LIMITS_COPY.rows} ·{" "}
+              Your file · CSV or Parquet · {LIMITS_COPY.file} · {LIMITS_COPY.rows} ·{" "}
               {unlimited ? (
                 <span className="text-accent">no daily limit</span>
               ) : (

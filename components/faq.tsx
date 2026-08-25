@@ -96,12 +96,14 @@ const ITEMS: Item[] = [
     ),
   },
   {
-    q: "How big can the file be?",
+    q: "How big can the file I upload be?",
     a: (
       <p>
         {LIMITS_COPY.file}, up to {LIMITS_COPY.rows} and {LIMITS_COPY.cols}, at{" "}
-        {LIMITS_COPY.perDay}. For scale, a public card-fraud benchmark of 227,845 rows
-        across 30 columns comes back in under a minute.
+        {LIMITS_COPY.perDay}. Those caps cover files you upload, which have to be received,
+        stored and parsed. The worked examples are prepared in advance and read where they
+        already sit, so none of the caps apply to them and running one does not use up a
+        prediction. The largest is a card-fraud benchmark of 284,807 rows across 31 columns.
       </p>
     ),
   },

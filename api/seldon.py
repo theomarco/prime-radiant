@@ -264,6 +264,14 @@ def _sb_request(method, path, data=None, headers=None, timeout=60):
 
 
 def storage_download(path):
+    # A bundled sample is stored as an absolute URL: it lives on the CDN and was
+    # never uploaded, so it is fetched straight from there. No auth, and no cache
+    # bust either, since caching a file that never changes is the point.
+    if path.startswith("http://") or path.startswith("https://"):
+        req = urllib.request.Request(path, method="GET")
+        with urllib.request.urlopen(req, timeout=120) as r:
+            return r.read()
+
     # Deleted objects keep being served from the CDN on the plain object path, so
     # bust the cache on every read, otherwise a job could be re-run against a
     # file we already promised the user we had thrown away.
@@ -533,8 +541,11 @@ def build_analysis(columns, feature_cols, target, train_idx, test_idx, preds, pr
 
 # --------------------------------------------------------------- actions ---
 MAX_CLASSES = 100
-# Rows returned per answer, ranked by confidence.
-RANKED_PER_LABEL = 60
+# Rows returned per answer, ranked by confidence. This is a shortlist to act on,
+# not the result set: 60 rendered as an unscrollable wall nobody read to the end
+# of. The panel states the count against the total, and the download has all of
+# them, so a short list here costs nothing.
+RANKED_PER_LABEL = 15
 
 
 MAX_FEATURE_CARDINALITY = 1000
