@@ -190,19 +190,28 @@ export default function Home() {
       {/* ----------------------------------------------------------- closing */}
       <section className="grid gap-6 py-20 lg:grid-cols-[9rem_minmax(0,1fr)] lg:gap-12 pb-28">
         <Reveal>
-          <p className="eyebrow lg:pt-1.5">What follows</p>
+          <p className="eyebrow lg:pt-1.5">What this is worth</p>
         </Reveal>
         <div>
         <Reveal className="max-w-[68ch] space-y-7 text-[1.0625rem] text-ink-soft">
           <p>
-            Most will wait. The fall of a craft is never believed until it is complete.
-            But a small fraction will read these axioms as instructions, and they will
-            build. Not a better tool for the old priesthood: a new foundation for how
-            decisions are made.
+            A forecast that arrives after the decision is a report. Most predictive work
+            fails there rather than in the model: the question takes a quarter to specify,
+            the pipeline takes a quarter to build, and by the time a number exists the
+            meeting that needed it has happened twice.
+          </p>
+          <p>
+            Collapsing that to an afternoon changes which questions get asked. Not the five
+            a year that survive a business case, but the hundred a week that never make it
+            to one. Which of these accounts is worth a call today. Which of these orders
+            will come back. Which of these leads is real.
+          </p>
+          <p>
+            None of those are hard questions. They are just questions nobody could afford
+            to ask.
           </p>
           <p className="display text-2xl !leading-snug text-ink">
-            They arrive with or without me. I intend to be early. The build begins now,
-            in public.
+            The build begins now, in public.
           </p>
         </Reveal>
 
