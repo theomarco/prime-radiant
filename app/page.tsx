@@ -25,13 +25,11 @@ const AXIOMS = [
   },
 ];
 
-const EVIDENCE = [
-  { label: "Which machines fail", rows: "6,400 rows of context", metric: "98.3%", sub: "right, on 1,600 unseen rows" },
-  { label: "Which customers leave", rows: "8,000 rows of context", metric: "86.9%", sub: "right, on 2,000 unseen rows" },
-  // Accuracy would read 99.95% here and mean nothing: guessing "not fraud" every
-  // time scores 99.83%. The count of frauds actually caught is the honest figure.
-  { label: "Which card charges are fraud", rows: "227,845 rows of context", metric: "79 of 98", metricSmall: true, sub: "frauds found in 56,962 rows, 9 false alarms" },
-  { label: "Time to answer", rows: "nothing was trained", metric: "2.7s", sub: "measured on this site" },
+const FACTS = [
+  { n: "9", label: "public datasets, on the Explore page" },
+  { n: "9", label: "sectors, from banking to logistics" },
+  { n: "0", label: "training runs, for any of them" },
+  { n: "2.7s", label: "to an answer, measured on this site" },
 ];
 
 export default function Home() {
@@ -150,42 +148,56 @@ export default function Home() {
 
       <hr className="border-line" />
 
-      {/* ---------------------------------------------------------- evidence */}
+      {/* ------------------------------------------------------------ pattern */}
       <section className="grid gap-6 py-20 lg:grid-cols-[9rem_minmax(0,1fr)] lg:gap-12">
         <Reveal>
-          <p className="eyebrow lg:pt-1.5">The measurement</p>
+          <p className="eyebrow lg:pt-1.5">What already happened</p>
         </Reveal>
         <div>
-        <Reveal>
-          <p className="max-w-[62ch] text-[1.0625rem] text-ink-soft">
-            Three public benchmarks, run through this site&apos;s own endpoint. No training,
-            no tuning, no feature engineering. The table went in as it was.
-          </p>
-        </Reveal>
-        <div className="mt-10 space-y-px overflow-hidden rounded-xl border border-line bg-line">
-          {EVIDENCE.map((item, i) => (
-            <Reveal key={item.label} index={i} className="bg-surface">
-              <div className="flex flex-col gap-4 p-7 sm:flex-row sm:items-baseline sm:justify-between sm:gap-10 sm:px-8">
-                <div className="sm:max-w-[24rem]">
-                  <p className="text-[1.0625rem] text-ink">{item.label}</p>
-                  <p className="mt-1 font-mono text-[0.6875rem] tracking-wide text-muted uppercase">
-                    {item.rows}
-                  </p>
+          <Reveal className="max-w-[62ch] space-y-7 text-[1.0625rem] text-ink-soft">
+            <p>
+              Ten years ago, doing anything useful with text meant training a model. Your
+              own corpus, your own labels, months of work, one model per task, and it began
+              going stale the day it shipped. Then pre-trained models arrived and that whole
+              job quietly disappeared. Nobody assembles a language model to sort their
+              support tickets any more. They just ask one.
+            </p>
+            <p>
+              Images went the same way. So did speech. Tables did not. They hold more of the
+              decisions a business actually makes than text and images combined, and
+              predicting who churns still costs what it cost in 2015: a project, a team, a
+              quarter.
+            </p>
+            <p className="text-ink">That is the part that ends. Not the predicting. The training.</p>
+            <p className="text-[0.875rem] text-muted italic">
+              The last time anyone trained a text model from scratch for one specific job, it
+              was called BERT, and it was 2018.
+            </p>
+          </Reveal>
+
+          <Reveal index={1} className="mt-10">
+            <div className="grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
+              {FACTS.map((f) => (
+                <div key={f.label} className="bg-surface p-6">
+                  <p className="display text-[2.25rem] leading-none">{f.n}</p>
+                  <p className="mt-3 text-[0.875rem] text-muted">{f.label}</p>
                 </div>
-                <div className="sm:text-right">
-                  <p className={item.metricSmall ? "display text-[1.85rem]" : "display text-[2.25rem]"}>
-                    {item.metric}
-                  </p>
-                  <p className="mt-1 text-[0.8125rem] text-muted">{item.sub}</p>
-                </div>
-              </div>
-            </Reveal>
-          ))}
-        </div>
+              ))}
+            </div>
+            <p className="mt-8 max-w-[62ch] text-[1.0625rem] text-ink-soft">
+              Bank customers, credit files, card payments, web sessions, machine sensors,
+              sales leads, employee records, hotel bookings, parcel shipments. Nothing was
+              fitted for any of them.{" "}
+              <Link
+                href="/predict"
+                className="text-ink underline decoration-line underline-offset-4 hover:decoration-muted"
+              >
+                Pick one.
+              </Link>
+            </p>
+          </Reveal>
         </div>
       </section>
-
-      <hr className="border-line" />
 
       {/* ----------------------------------------------------------- closing */}
       <section className="grid gap-6 py-20 lg:grid-cols-[9rem_minmax(0,1fr)] lg:gap-12 pb-28">
